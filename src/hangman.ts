@@ -19,6 +19,7 @@ export type PublicHangmanStatus = {
   turn: HangmanTurn;
   clue: string;
   wordLength: number;
+  hasSecretWord: boolean;
   mask: string;
   usedLetters: string[];
   missedLetters: string[];
@@ -58,6 +59,7 @@ function getPublicStatus(round: HangmanRound): PublicHangmanStatus {
     turn: round.turn,
     clue: round.clue,
     wordLength: round.wordLength,
+    hasSecretWord: Boolean(round.secretWord),
     mask: getMask(round),
     usedLetters: [...round.usedLetters],
     missedLetters: [...round.missedLetters],
