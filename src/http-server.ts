@@ -17,9 +17,30 @@ const allowedOrigin = process.env.FRONTEND_ORIGIN ?? "*";
 
 const app = createMcpExpressApp({ host: "0.0.0.0" });
 
+function normalizeOrigin(origin: string) {
+  return origin.replace(/\/$/, "");
+}
+
+const allowedOrigins = allowedOrigin
+  .split(",")
+  .map((origin) => normalizeOrigin(origin.trim()))
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: allowedOrigin === "*" ? true : allowedOrigin,
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes("*")) {
+        callback(null, true);
+        return;
+      }
+
+      const normalizedOrigin = normalizeOrigin(origin);
+      const isLocalDev =
+        normalizedOrigin.startsWith("http://127.0.0.1:") ||
+        normalizedOrigin.startsWith("http://localhost:");
+
+      callback(null, isLocalDev || allowedOrigins.includes(normalizedOrigin));
+    },
   }),
 );
 app.use(express.json());
