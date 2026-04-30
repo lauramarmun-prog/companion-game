@@ -1,0 +1,28 @@
+{
+  "name": "mcp-companion-game",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "dev:http": "tsx src/http-server.ts",
+    "build": "tsc",
+    "start": "node dist/http-server.js",
+    "start:stdio": "node dist/server.js",
+    "check": "tsc --noEmit",
+    "smoke": "tsx src/smoke-test.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^20.17.30",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
+  }
+}
