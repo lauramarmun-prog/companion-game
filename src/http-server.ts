@@ -8,6 +8,7 @@ import {
   getHangmanStatus,
   startHangmanRound,
   submitHangmanLetter,
+  submitHangmanWord,
   type HangmanTurn,
 } from "./hangman.js";
 import { createCompanionMcpServer } from "./mcp.js";
@@ -60,6 +61,7 @@ app.get("/", (_req, res) => {
       startHangmanRound: "POST /api/hangman/round",
       getHangmanStatus: "GET /api/hangman/status/:roundId?",
       submitHangmanLetter: "POST /api/hangman/letter",
+      submitHangmanWord: "POST /api/hangman/word",
     },
   });
 });
@@ -112,6 +114,19 @@ app.post("/api/hangman/letter", (req, res) => {
     const result = submitHangmanLetter({
       roundId: body.roundId,
       letter: body.letter ?? "",
+    });
+    res.json({ ok: true, result });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post("/api/hangman/word", (req, res) => {
+  try {
+    const body = req.body as { roundId?: string; word?: string };
+    const result = submitHangmanWord({
+      roundId: body.roundId,
+      word: body.word ?? "",
     });
     res.json({ ok: true, result });
   } catch (error) {

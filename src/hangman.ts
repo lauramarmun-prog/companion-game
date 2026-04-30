@@ -167,3 +167,46 @@ export function submitHangmanLetter(input: { roundId?: string; letter: string })
     status: getPublicStatus(round),
   };
 }
+
+export function submitHangmanWord(input: { roundId?: string; word: string }) {
+  const roundId = input.roundId ?? activeRoundId;
+  if (!roundId) throw new Error("No hangman round has been started yet.");
+
+  const round = rounds.get(roundId);
+  if (!round) throw new Error(`Hangman round not found: ${roundId}`);
+  if (round.status !== "playing") {
+    return {
+      correct: false,
+      message: `This round is already ${round.status}.`,
+      status: getPublicStatus(round),
+    };
+  }
+  if (!round.secretWord) {
+    throw new Error("This round does not have a private secret word yet.");
+  }
+
+  const word = cleanWord(input.word);
+  if (!word) throw new Error("Submit a word with letters from A to Z.");
+
+  const correct = word === round.secretWord;
+  if (correct) {
+    round.secretWord.split("").forEach((letter) => {
+      if (!round.usedLetters.includes(letter)) round.usedLetters.push(letter);
+    });
+    round.usedLetters.sort();
+    round.status = "won";
+  } else {
+    round.missedLetters.push(word);
+    round.missedLetters.sort();
+    if (round.missedLetters.length >= round.maxWrong) round.status = "lost";
+  }
+
+  round.updatedAt = now();
+
+  return {
+    correct,
+    submittedWord: word,
+    message: correct ? "That is the secret word." : "That is not the secret word.",
+    status: getPublicStatus(round),
+  };
+}

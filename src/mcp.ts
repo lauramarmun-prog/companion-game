@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { getHangmanStatus, startHangmanRound, submitHangmanLetter } from "./hangman.js";
+import { getHangmanStatus, startHangmanRound, submitHangmanLetter, submitHangmanWord } from "./hangman.js";
 
 function asToolText(value: unknown) {
   return {
@@ -62,6 +62,16 @@ Use turn="ai" when the AI will guess a word chosen by the human/frontend. For pr
       letter: z.string().min(1).max(3).describe("One guessed letter."),
     },
     async (input) => asToolText(submitHangmanLetter(input)),
+  );
+
+  server.tool(
+    "submit_hangman_word",
+    "Submit a full-word guess for the active Hangman round. This returns whether the word was correct without revealing the secret word on a miss.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active Hangman round."),
+      word: z.string().min(1).max(40).describe("The full word guess."),
+    },
+    async (input) => asToolText(submitHangmanWord(input)),
   );
 
   return server;
