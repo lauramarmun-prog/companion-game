@@ -13,11 +13,181 @@ function asToolText(value: unknown) {
   };
 }
 
+const hangmanHowToPlay = `# Hangman MCP - Game Guide for AIs
+
+## What is Hangman?
+
+Hangman is a classic word-guessing game. One player thinks of a secret word and gives a clue. The other player tries to guess the word by suggesting letters one at a time, or by guessing the complete word. You have a limited number of wrong guesses: 6.
+
+## Available tools
+
+### start_hangman_round
+
+Starts a new game round.
+
+Parameters:
+- turn: who is guessing.
+- "human": you, the AI, choose the word and the human guesses. Provide secretWord and clue.
+- "ai": the human chooses the word and you guess. Provide clue and wordLength.
+- clue: hint about the word.
+- secretWord: the word to guess, only when turn is "human".
+- wordLength: number of letters, only when turn is "ai".
+
+Example:
+\`\`\`text
+start_hangman_round(
+  turn="human",
+  secretWord="girasol",
+  clue="Una flor amarilla que siempre mira al sol"
+)
+\`\`\`
+
+### get_hangman_status
+
+Gets the current game state.
+
+Returns:
+- mask: the word with unknown letters as underscores, for example "_ O _ _ _ _ _ O".
+- usedLetters: all letters guessed so far.
+- missedLetters: wrong guesses only.
+- wrongGuesses: number of mistakes.
+- maxWrong: maximum mistakes allowed, normally 6.
+- status: "playing", "won", or "lost".
+- clue: the hint for this word.
+- wordLength: total letters in the word.
+- hasSecretWord: whether the private secret word has already been set.
+
+Example response:
+\`\`\`json
+{
+  "mask": "S O L _ _ _ _ O",
+  "usedLetters": ["O", "S", "L"],
+  "missedLetters": [],
+  "wrongGuesses": 0,
+  "status": "playing"
+}
+\`\`\`
+
+### submit_hangman_letter
+
+Guess a single letter.
+
+Parameters:
+- letter: one letter to guess, for example "A".
+
+Returns:
+- correct: true or false.
+- message: feedback message.
+- status: updated game state.
+
+Example:
+\`\`\`text
+submit_hangman_letter(letter="A")
+\`\`\`
+
+### submit_hangman_word
+
+Guess the complete word when you think you know it.
+
+Parameters:
+- word: the full word you are guessing, for example "solecito".
+
+Returns:
+- correct: true or false.
+- submittedWord: the word you submitted, uppercase.
+- message: feedback message.
+- status: updated game state.
+
+If correct, status becomes "won" and the mask reveals the complete word. If wrong, the secret word stays hidden and the wrong guess count increases.
+
+Example:
+\`\`\`text
+submit_hangman_word(word="laura")
+\`\`\`
+
+## Strategy guide for AIs
+
+When you are guessing, turn is "ai":
+
+1. Start with common vowels.
+- Spanish: A, E, O, I, U.
+- English: E, A, O, I.
+
+2. Then try common consonants.
+- Spanish: S, R, N, L, T, D, C.
+- English: T, N, S, R, H, L, D.
+
+3. Read the mask pattern.
+- "_ O _ _ _ _ _ O" means the word has O in positions 2 and 8.
+- "S O L _ _ _ _ O" means it starts with SOL and ends with O.
+
+4. Use submit_hangman_word when:
+- You are confident you know the word.
+- Only 1 or 2 letters remain unknown and the pattern is clear.
+- The clue plus revealed letters make it obvious.
+- Do not guess blindly. Wrong word guesses count as mistakes.
+
+5. Example thinking process:
+
+Clue: "da calorcito"
+Mask: "S O L _ _ _ _ O" with 8 letters
+Letters tried: S, O, L
+
+Analysis:
+- Starts with "SOL", sun in Spanish.
+- Ends with "O".
+- Clue means it gives warmth.
+- 8 letters total.
+- Likely answer: "SOLECITO".
+
+Action:
+\`\`\`text
+submit_hangman_word(word="solecito")
+\`\`\`
+
+## Complete game flow example
+
+Start the game:
+\`\`\`text
+start_hangman_round(turn="ai", clue="mi nombre", wordLength=5)
+\`\`\`
+
+Get status:
+\`\`\`text
+get_hangman_status()
+\`\`\`
+
+Guess letters:
+\`\`\`text
+submit_hangman_letter(letter="A")
+submit_hangman_letter(letter="L")
+\`\`\`
+
+Guess the word:
+\`\`\`text
+submit_hangman_word(word="laura")
+\`\`\`
+
+## Important notes
+
+- You have 6 wrong guesses maximum before losing.
+- Repeated letters do not count as wrong guesses.
+- The secret word is never revealed in responses unless the round is won through correct guesses.
+- Always check the status field: "playing", "won", or "lost".
+- Use submit_hangman_word strategically. It is faster, but risky if you are wrong.`;
+
 export function createCompanionMcpServer() {
   const server = new McpServer({
     name: "mcp-companion-game",
     version: "0.1.0",
   });
+
+  server.tool(
+    "hangman_how_to_play",
+    "Read the Hangman MCP rules, available tools, full game flow, and strategy guide for AIs.",
+    {},
+    async () => asToolText({ guide: hangmanHowToPlay }),
+  );
 
   server.tool(
     "start_hangman_round",
