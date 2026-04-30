@@ -95,6 +95,12 @@ app.get("/api/hangman/status", (_req, res) => {
     const status = getHangmanStatus();
     res.json({ ok: true, status });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    if (message === "No hangman round has been started yet.") {
+      res.json({ ok: true, status: null, needsRound: true });
+      return;
+    }
+
     sendApiError(res, error);
   }
 });
