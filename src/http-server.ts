@@ -12,6 +12,7 @@ import {
   type HangmanTurn,
 } from "./hangman.js";
 import { createCompanionMcpServer } from "./mcp.js";
+import { getTicTacToeStatus, startTicTacToeRound, submitTicTacToeMove } from "./ticTacToe.js";
 
 const port = Number(process.env.PORT ?? 3000);
 const allowedOrigin = process.env.FRONTEND_ORIGIN ?? "*";
@@ -64,6 +65,9 @@ app.get("/", (_req, res) => {
       getHangmanStatus: "GET /api/hangman/status/:roundId?",
       submitHangmanLetter: "POST /api/hangman/letter",
       submitHangmanWord: "POST /api/hangman/word",
+      startTicTacToeRound: "POST /api/tic-tac-toe/round",
+      getTicTacToeStatus: "GET /api/tic-tac-toe/status/:roundId?",
+      submitTicTacToeMove: "POST /api/tic-tac-toe/move",
     },
   });
 });
@@ -135,6 +139,54 @@ app.post("/api/hangman/word", (req, res) => {
     const result = submitHangmanWord({
       roundId: body.roundId,
       word: body.word ?? "",
+    });
+    res.json({ ok: true, result });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post("/api/tic-tac-toe/round", (req, res) => {
+  try {
+    const body = req.body as { humanPlayer?: "X" | "O"; startingPlayer?: "X" | "O" };
+    const status = startTicTacToeRound(body);
+    res.json({ ok: true, status });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.get("/api/tic-tac-toe/status", (_req, res) => {
+  try {
+    const status = getTicTacToeStatus();
+    res.json({ ok: true, status });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    if (message === "No tic-tac-toe round has been started yet.") {
+      res.json({ ok: true, status: null, needsRound: true });
+      return;
+    }
+
+    sendApiError(res, error);
+  }
+});
+
+app.get("/api/tic-tac-toe/status/:roundId", (req, res) => {
+  try {
+    const status = getTicTacToeStatus(req.params["roundId"]);
+    res.json({ ok: true, status });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post("/api/tic-tac-toe/move", (req, res) => {
+  try {
+    const body = req.body as { roundId?: string; index?: number; player?: "X" | "O" };
+    const result = submitTicTacToeMove({
+      roundId: body.roundId,
+      index: body.index ?? -1,
+      player: body.player,
     });
     res.json({ ok: true, result });
   } catch (error) {

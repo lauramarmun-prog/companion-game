@@ -12,6 +12,13 @@ The first pilot game is Hangman. The important rule is that public status never 
 - `submit_hangman_word`: submits a full-word guess.
 - `hangman_how_to_play`: returns the game guide and AI strategy notes.
 
+## Tic-Tac-Toe tools
+
+- `tic_tac_toe_how_to_play`: returns the game guide and strategy notes.
+- `start_tic_tac_toe_round`: starts a round.
+- `get_tic_tac_toe_status`: returns the public state of the current round.
+- `submit_tic_tac_toe_move`: submits one move by board index.
+
 For production, rounds where the AI guesses should be created by the private web backend/frontend bridge, because the secret word must not be passed through a visible AI tool call. For local testing, `start_hangman_round` accepts a secret word in `ai` mode so we can exercise the full logic before the web bridge exists.
 
 ## HTTP backend

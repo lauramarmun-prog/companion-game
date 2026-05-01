@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { getHangmanStatus, startHangmanRound, submitHangmanLetter, submitHangmanWord } from "./hangman.js";
+import { getTicTacToeStatus, startTicTacToeRound, submitTicTacToeMove } from "./ticTacToe.js";
 
 function asToolText(value: unknown) {
   return {
@@ -176,6 +177,46 @@ submit_hangman_word(word="laura")
 - Always check the status field: "playing", "won", or "lost".
 - Use submit_hangman_word strategically. It is faster, but risky if you are wrong.`;
 
+const ticTacToeHowToPlay = `# Tic-Tac-Toe MCP - Game Guide for AIs
+
+Tic-Tac-Toe is played on a 3 by 3 board. Players take turns placing X or O. The first player to make three in a row wins. A full board with no winner is a draw.
+
+## Board indexes
+
+Use indexes from 0 to 8:
+
+0 | 1 | 2
+3 | 4 | 5
+6 | 7 | 8
+
+## Available tools
+
+### start_tic_tac_toe_round
+
+Starts a new round. By default the human is X, the AI is O, and X starts.
+
+### get_tic_tac_toe_status
+
+Returns the current board, currentPlayer, availableMoves, status, winner, and winningLine.
+
+### submit_tic_tac_toe_move
+
+Submits one move.
+
+Parameters:
+- index: board cell from 0 to 8.
+- player: optional, "X" or "O". If omitted, the current player is used.
+
+## Strategy for AIs
+
+1. Win if you can make three in a row.
+2. Block the opponent if they can win next.
+3. Take the center if it is free.
+4. Prefer corners.
+5. Use sides only when better options are gone.
+
+Always check availableMoves before moving.`;
+
 export function createCompanionMcpServer() {
   const server = new McpServer({
     name: "mcp-companion-game",
@@ -242,6 +283,43 @@ Use turn="ai" when the AI will guess a word chosen by the human/frontend. For pr
       word: z.string().min(1).max(40).describe("The full word guess."),
     },
     async (input) => asToolText(submitHangmanWord(input)),
+  );
+
+  server.tool(
+    "tic_tac_toe_how_to_play",
+    "Read the Tic-Tac-Toe MCP rules, board indexes, tools, and strategy guide for AIs.",
+    {},
+    async () => asToolText({ guide: ticTacToeHowToPlay }),
+  );
+
+  server.tool(
+    "start_tic_tac_toe_round",
+    "Start a new Tic-Tac-Toe round. The human is X by default and the AI is O.",
+    {
+      humanPlayer: z.enum(["X", "O"]).optional().describe("Defaults to X."),
+      startingPlayer: z.enum(["X", "O"]).optional().describe("Defaults to X."),
+    },
+    async (input) => asToolText(startTicTacToeRound(input)),
+  );
+
+  server.tool(
+    "get_tic_tac_toe_status",
+    "Get the public state of the active Tic-Tac-Toe round.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active Tic-Tac-Toe round."),
+    },
+    async ({ roundId }) => asToolText(getTicTacToeStatus(roundId)),
+  );
+
+  server.tool(
+    "submit_tic_tac_toe_move",
+    "Submit a Tic-Tac-Toe move using a board index from 0 to 8.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active Tic-Tac-Toe round."),
+      index: z.number().int().min(0).max(8),
+      player: z.enum(["X", "O"]).optional().describe("Defaults to the current player."),
+    },
+    async (input) => asToolText(submitTicTacToeMove(input)),
   );
 
   return server;
