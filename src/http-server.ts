@@ -13,6 +13,7 @@ import {
 } from "./hangman.js";
 import { createCompanionMcpServer } from "./mcp.js";
 import { getTicTacToeStatus, startTicTacToeRound, submitTicTacToeMove } from "./ticTacToe.js";
+import { getWordlyStatus, startWordlyRound, submitWordlyGuess, type WordlyTurn } from "./wordly.js";
 
 const port = Number(process.env.PORT ?? 3000);
 const allowedOrigin = process.env.FRONTEND_ORIGIN ?? "*";
@@ -56,8 +57,15 @@ app.get("/", (_req, res) => {
   res.json({
     ok: true,
     name: "mcp-companion-game",
-    version: "0.1.1",
-    features: ["hangman-status", "hangman-letter-guess", "hangman-word-guess", "empty-status-ok"],
+    version: "0.1.2",
+    features: [
+      "hangman-status",
+      "hangman-letter-guess",
+      "hangman-word-guess",
+      "tic-tac-toe",
+      "wordly",
+      "empty-status-ok",
+    ],
     mcp: "/mcp",
     api: {
       health: "/health",
@@ -68,6 +76,9 @@ app.get("/", (_req, res) => {
       startTicTacToeRound: "POST /api/tic-tac-toe/round",
       getTicTacToeStatus: "GET /api/tic-tac-toe/status/:roundId?",
       submitTicTacToeMove: "POST /api/tic-tac-toe/move",
+      startWordlyRound: "POST /api/wordly/round",
+      getWordlyStatus: "GET /api/wordly/status/:roundId?",
+      submitWordlyGuess: "POST /api/wordly/guess",
     },
   });
 });
@@ -187,6 +198,63 @@ app.post("/api/tic-tac-toe/move", (req, res) => {
       roundId: body.roundId,
       index: body.index ?? -1,
       player: body.player,
+    });
+    res.json({ ok: true, result });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post("/api/wordly/round", (req, res) => {
+  try {
+    const body = req.body as {
+      turn?: WordlyTurn;
+      secretWord?: string;
+      clue?: string;
+      maxGuesses?: number;
+    };
+    const status = startWordlyRound({
+      turn: body.turn,
+      secretWord: body.secretWord ?? "",
+      clue: body.clue,
+      maxGuesses: body.maxGuesses,
+    });
+    res.json({ ok: true, status });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.get("/api/wordly/status", (_req, res) => {
+  try {
+    const status = getWordlyStatus();
+    res.json({ ok: true, status });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    if (message === "No wordly round has been started yet.") {
+      res.json({ ok: true, status: null, needsRound: true });
+      return;
+    }
+
+    sendApiError(res, error);
+  }
+});
+
+app.get("/api/wordly/status/:roundId", (req, res) => {
+  try {
+    const status = getWordlyStatus(req.params["roundId"]);
+    res.json({ ok: true, status });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post("/api/wordly/guess", (req, res) => {
+  try {
+    const body = req.body as { roundId?: string; guess?: string };
+    const result = submitWordlyGuess({
+      roundId: body.roundId,
+      guess: body.guess ?? "",
     });
     res.json({ ok: true, result });
   } catch (error) {

@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { getHangmanStatus, startHangmanRound, submitHangmanLetter, submitHangmanWord } from "./hangman.js";
 import { getTicTacToeStatus, startTicTacToeRound, submitTicTacToeMove } from "./ticTacToe.js";
+import { getWordlyStatus, startWordlyRound, submitWordlyGuess } from "./wordly.js";
 
 function asToolText(value: unknown) {
   return {
@@ -217,6 +218,57 @@ Parameters:
 
 Always check availableMoves before moving.`;
 
+const wordlyHowToPlay = `# Wordly MCP - Game Guide for AIs
+
+Wordly is a five-letter word guessing game. A secret word is chosen, then the guesser has 6 attempts to find it.
+
+Each guess returns 5 letter scores:
+- hit: the letter is correct and in the correct position.
+- near: the letter exists in the word but is in a different position.
+- miss: the letter is not in the word.
+
+## Available tools
+
+### start_wordly_round
+
+Starts a new round.
+
+Parameters:
+- turn: who is guessing. Use "human" when you choose the word and the human guesses. Use "ai" when the human chooses the word and you guess.
+- secretWord: private 5-letter word. It is not returned while the round is playing.
+- clue: optional soft hint.
+
+Example:
+\`\`\`text
+start_wordly_round(turn="human", secretWord="cloud", clue="Where apps often live")
+\`\`\`
+
+### get_wordly_status
+
+Returns the public state:
+- guesses: submitted words and their scores.
+- maxGuesses: normally 6.
+- remainingGuesses.
+- status: "playing", "won", or "lost".
+- answer: null while playing, revealed only after the round ends.
+
+### submit_wordly_guess
+
+Submit a 5-letter word guess.
+
+Example:
+\`\`\`text
+submit_wordly_guess(guess="cloud")
+\`\`\`
+
+## Strategy for AIs
+
+1. Start with words containing common letters.
+2. Keep hit letters fixed in their positions.
+3. Move near letters to other positions.
+4. Avoid miss letters in later guesses.
+5. Use the clue if one is provided, but trust the letter scores most.`;
+
 export function createCompanionMcpServer() {
   const server = new McpServer({
     name: "mcp-companion-game",
@@ -320,6 +372,44 @@ Use turn="ai" when the AI will guess a word chosen by the human/frontend. For pr
       player: z.enum(["X", "O"]).optional().describe("Defaults to the current player."),
     },
     async (input) => asToolText(submitTicTacToeMove(input)),
+  );
+
+  server.tool(
+    "wordly_how_to_play",
+    "Read the Wordly MCP rules, scoring meanings, available tools, and strategy guide for AIs.",
+    {},
+    async () => asToolText({ guide: wordlyHowToPlay }),
+  );
+
+  server.tool(
+    "start_wordly_round",
+    "Start a new Wordly round with a private 5-letter secret word.",
+    {
+      turn: z.enum(["human", "ai"]).optional().describe("Who is guessing. Defaults to human."),
+      secretWord: z.string().min(5).max(5).describe("Private 5-letter secret word."),
+      clue: z.string().optional().describe("Optional soft hint shown in the frontend/status."),
+      maxGuesses: z.number().int().min(1).max(10).optional().describe("Defaults to 6."),
+    },
+    async (input) => asToolText(startWordlyRound(input)),
+  );
+
+  server.tool(
+    "get_wordly_status",
+    "Get the public state of the active Wordly round. The answer is hidden while playing.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active Wordly round."),
+    },
+    async ({ roundId }) => asToolText(getWordlyStatus(roundId)),
+  );
+
+  server.tool(
+    "submit_wordly_guess",
+    "Submit a 5-letter Wordly guess and receive hit/near/miss scores.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active Wordly round."),
+      guess: z.string().min(5).max(5).describe("The 5-letter word guess."),
+    },
+    async (input) => asToolText(submitWordlyGuess(input)),
   );
 
   return server;

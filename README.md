@@ -2,7 +2,7 @@
 
 Small MCP server for Companion Games.
 
-The first pilot game is Hangman. The important rule is that public status never returns the secret word. The AI can see the clue, word length, used letters, missed letters, and the current mask.
+The first pilot game is Hangman. Wordly and Tic-Tac-Toe are also available. The important rule is that public status does not return private secret words while a round is still playing.
 
 ## Hangman tools
 
@@ -18,6 +18,13 @@ The first pilot game is Hangman. The important rule is that public status never 
 - `start_tic_tac_toe_round`: starts a round.
 - `get_tic_tac_toe_status`: returns the public state of the current round.
 - `submit_tic_tac_toe_move`: submits one move by board index.
+
+## Wordly tools
+
+- `wordly_how_to_play`: returns the game guide and AI strategy notes.
+- `start_wordly_round`: starts a round with a private 5-letter word.
+- `get_wordly_status`: returns guesses, hit/near/miss scores, remaining guesses, and status.
+- `submit_wordly_guess`: submits a 5-letter guess.
 
 For production, rounds where the AI guesses should be created by the private web backend/frontend bridge, because the secret word must not be passed through a visible AI tool call. For local testing, `start_hangman_round` accepts a secret word in `ai` mode so we can exercise the full logic before the web bridge exists.
 
@@ -35,6 +42,13 @@ Useful API calls:
 - `GET /api/hangman/status`
 - `GET /api/hangman/status/:roundId`
 - `POST /api/hangman/letter`
+- `POST /api/hangman/word`
+- `POST /api/tic-tac-toe/round`
+- `GET /api/tic-tac-toe/status`
+- `POST /api/tic-tac-toe/move`
+- `POST /api/wordly/round`
+- `GET /api/wordly/status`
+- `POST /api/wordly/guess`
 
 For local development:
 
