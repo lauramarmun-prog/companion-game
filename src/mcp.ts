@@ -234,9 +234,11 @@ Each guess returns 5 letter scores:
 Starts a new round.
 
 Parameters:
-- turn: who is guessing. Use "human" when you choose the word and the human guesses. Use "ai" when the human chooses the word and you guess.
+- turn: who is guessing.
+- Use "human" when you choose the word and the human guesses. Provide secretWord and clue.
+- Use "ai" when the human will choose the word in the frontend and you guess. Do not provide secretWord unless you are only testing locally.
 - secretWord: private 5-letter word. It is not returned while the round is playing.
-- clue: optional soft hint.
+- clue: optional soft hint. In AI-guessing mode, the frontend can set this privately with the word.
 
 Example:
 \`\`\`text
@@ -247,6 +249,7 @@ start_wordly_round(turn="human", secretWord="cloud", clue="Where apps often live
 
 Returns the public state:
 - guesses: submitted words and their scores.
+- hasSecretWord: whether the private word has been set.
 - maxGuesses: normally 6.
 - remainingGuesses.
 - status: "playing", "won", or "lost".
@@ -383,10 +386,14 @@ Use turn="ai" when the AI will guess a word chosen by the human/frontend. For pr
 
   server.tool(
     "start_wordly_round",
-    "Start a new Wordly round with a private 5-letter secret word.",
+    `Start a new Wordly round.
+
+Use turn="human" when the human will guess a word chosen by the AI. In that mode, provide secretWord and clue.
+
+Use turn="ai" when the AI will guess a word chosen privately by the human/frontend. In that mode, secretWord can be omitted while the frontend prepares the private word and clue.`,
     {
       turn: z.enum(["human", "ai"]).optional().describe("Who is guessing. Defaults to human."),
-      secretWord: z.string().min(5).max(5).describe("Private 5-letter secret word."),
+      secretWord: z.string().min(5).max(5).optional().describe("Private 5-letter secret word."),
       clue: z.string().optional().describe("Optional soft hint shown in the frontend/status."),
       maxGuesses: z.number().int().min(1).max(10).optional().describe("Defaults to 6."),
     },

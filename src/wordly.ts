@@ -10,7 +10,7 @@ export type WordlyGuess = {
 export type WordlyRound = {
   id: string;
   turn: WordlyTurn;
-  secretWord: string;
+  secretWord?: string;
   clue: string | null;
   guesses: WordlyGuess[];
   maxGuesses: number;
@@ -70,6 +70,7 @@ function getPublicStatus(round: WordlyRound) {
     turn: round.turn,
     clue: round.clue,
     wordLength: 5,
+    hasSecretWord: Boolean(round.secretWord),
     guesses: round.guesses.map((guess) => ({
       word: guess.word,
       score: [...guess.score],
@@ -79,25 +80,29 @@ function getPublicStatus(round: WordlyRound) {
     remainingGuesses: Math.max(round.maxGuesses - round.guesses.length, 0),
     status: round.status,
     nextActor: round.turn,
-    answer: complete ? round.secretWord : null,
+    answer: complete ? round.secretWord ?? null : null,
   };
 }
 
 export function startWordlyRound(input: {
   turn?: WordlyTurn;
-  secretWord: string;
+  secretWord?: string;
   clue?: string | null;
   maxGuesses?: number;
 }) {
-  const secretWord = cleanWord(input.secretWord);
-  if (secretWord.length !== 5) {
+  const turn = input.turn ?? "human";
+  const secretWord = input.secretWord ? cleanWord(input.secretWord) : undefined;
+  if (secretWord && secretWord.length !== 5) {
     throw new Error("Wordly needs a secret word with exactly 5 letters.");
+  }
+  if (turn === "human" && !secretWord) {
+    throw new Error("A human Wordly turn needs a secret word from the AI.");
   }
 
   const timestamp = now();
   const round: WordlyRound = {
     id: createId(),
-    turn: input.turn ?? "human",
+    turn,
     secretWord,
     clue: input.clue?.trim() || null,
     guesses: [],
@@ -133,6 +138,9 @@ export function submitWordlyGuess(input: { roundId?: string; guess: string }) {
       message: `This round is already ${round.status}.`,
       status: getPublicStatus(round),
     };
+  }
+  if (!round.secretWord) {
+    throw new Error("This Wordly round does not have a private secret word yet.");
   }
 
   const guess = cleanWord(input.guess);

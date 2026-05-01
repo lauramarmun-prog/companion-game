@@ -23,3 +23,6 @@ const wordly = startWordlyRound({ turn: "human", secretWord: "cloud", clue: "Whe
 console.log("WORDLY START", wordly);
 console.log("WORDLY MISS", submitWordlyGuess({ roundId: wordly.roundId, guess: "paper" }));
 console.log("WORDLY HIT", submitWordlyGuess({ roundId: wordly.roundId, guess: "cloud" }));
+
+const pendingWordly = startWordlyRound({ turn: "ai" });
+console.log("WORDLY AI PENDING", pendingWordly);

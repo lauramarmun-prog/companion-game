@@ -57,7 +57,7 @@ app.get("/", (_req, res) => {
   res.json({
     ok: true,
     name: "mcp-companion-game",
-    version: "0.1.2",
+    version: "0.1.3",
     features: [
       "hangman-status",
       "hangman-letter-guess",
