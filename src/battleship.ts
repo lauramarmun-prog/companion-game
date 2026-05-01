@@ -1,4 +1,4 @@
-export type BattleshipCell = `${"A" | "B" | "C" | "D"}${1 | 2 | 3 | 4 | 5 | 6}`;
+export type BattleshipCell = string;
 export type BattleshipOwner = "human" | "ai";
 export type BattleshipStatus = "setup" | "playing" | "won" | "lost";
 
@@ -22,12 +22,14 @@ export type BattleshipRound = {
   updatedAt: string;
 };
 
-const rows = ["A", "B", "C", "D"] as const;
-const cols = [1, 2, 3, 4, 5, 6] as const;
+const rows = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"] as const;
+const cols = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 const fleet = [
-  { id: "large", name: "Large ship", length: 3 },
-  { id: "small-1", name: "Small ship 1", length: 2 },
-  { id: "small-2", name: "Small ship 2", length: 2 },
+  { id: "carrier", name: "Carrier", length: 5 },
+  { id: "battleship", name: "Battleship", length: 4 },
+  { id: "cruiser", name: "Cruiser", length: 3 },
+  { id: "submarine", name: "Submarine", length: 3 },
+  { id: "destroyer", name: "Destroyer", length: 2 },
 ];
 
 const battleshipRounds = new Map<string, BattleshipRound>();
@@ -50,7 +52,7 @@ function parseCell(cell: string): { row: number; col: number; id: BattleshipCell
   const row = rows.indexOf(normalized[0] as (typeof rows)[number]);
   const colNumber = Number(normalized.slice(1));
   const col = cols.indexOf(colNumber as (typeof cols)[number]);
-  if (row === -1 || col === -1) throw new Error(`Invalid coordinate: ${cell}. Use A1 to D6.`);
+  if (row === -1 || col === -1) throw new Error(`Invalid coordinate: ${cell}. Use A1 to J10.`);
   return { row, col, id: normalized as BattleshipCell };
 }
 
@@ -69,11 +71,11 @@ function occupiedShips(ships: ShipSpec[]) {
 }
 
 function validateFleet(ships: ShipSpec[]) {
-  if (ships.length !== fleet.length) throw new Error("Fleet needs one length-3 ship and two length-2 ships.");
+  if (ships.length !== fleet.length) throw new Error("Fleet needs ships with lengths 5, 4, 3, 3, and 2.");
   const lengths = ships.map((ship) => ship.cells.length).sort().join(",");
-  if (lengths !== "2,2,3") throw new Error("Fleet must use ship lengths 3, 2, and 2.");
+  if (lengths !== "2,3,3,4,5") throw new Error("Fleet must use ship lengths 5, 4, 3, 3, and 2.");
   const occupied = occupiedShips(ships);
-  if (occupied.size !== 7) throw new Error("Ships cannot overlap.");
+  if (occupied.size !== 17) throw new Error("Ships cannot overlap.");
 }
 
 function makeRandomFleet() {

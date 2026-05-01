@@ -36,9 +36,11 @@ console.log(
     roundId: battle.roundId,
     owner: "human",
     ships: [
-      { length: 3, start: "A1", orientation: "horizontal" },
-      { length: 2, start: "B1", orientation: "horizontal" },
-      { length: 2, start: "C1", orientation: "horizontal" },
+      { length: 5, start: "A1", orientation: "horizontal" },
+      { length: 4, start: "B1", orientation: "horizontal" },
+      { length: 3, start: "C1", orientation: "horizontal" },
+      { length: 3, start: "D1", orientation: "horizontal" },
+      { length: 2, start: "E1", orientation: "horizontal" },
     ],
   }),
 );
