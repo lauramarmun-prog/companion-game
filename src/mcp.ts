@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { getBattleshipStatus, placeBattleshipFleet, startBattleshipRound, submitBattleshipAttack } from "./battleship.js";
 import { getHangmanStatus, startHangmanRound, submitHangmanLetter, submitHangmanWord } from "./hangman.js";
 import { getTicTacToeStatus, startTicTacToeRound, submitTicTacToeMove } from "./ticTacToe.js";
 import { getWordlyStatus, startWordlyRound, submitWordlyGuess } from "./wordly.js";
@@ -272,6 +273,32 @@ submit_wordly_guess(guess="cloud")
 4. Avoid miss letters in later guesses.
 5. Use the clue if one is provided, but trust the letter scores most.`;
 
+const battleshipHowToPlay = `# Battleship MCP - Game Guide for AIs
+
+Battleship is played on a 6 by 4 board. Columns are 1 to 6. Rows are A to D. Coordinates look like A1, A2, B4, D6.
+
+Fleet:
+- 1 large ship with 3 cells.
+- 2 small ships with 2 cells each.
+
+Ships can be horizontal or vertical and cannot overlap.
+
+The human places ships privately in the frontend. You know the human fleet is ready, but you never receive the human ship positions.
+
+Your AI fleet can be placed with place_battleship_ai_fleet. If you do not place it, the backend starts with a random AI fleet.
+
+Tools:
+- start_battleship_round: starts a new round.
+- get_battleship_status: returns board, shots, ready flags, sunk ships, and your AI ship positions.
+- place_battleship_ai_fleet: places your fleet. Use starts like A1 with orientation horizontal or vertical.
+- submit_battleship_attack: attack the human sea with a coordinate. The API returns hit or miss, and sunk when a ship is completed.
+
+Strategy:
+1. Attack checkerboard-style first.
+2. When you hit, attack adjacent cells.
+3. Track misses so you do not repeat a coordinate.
+4. Remember the fleet lengths: 3, 2, and 2.`;
+
 export function createCompanionMcpServer() {
   const server = new McpServer({
     name: "mcp-companion-game",
@@ -417,6 +444,57 @@ Use turn="ai" when the AI will guess a word chosen privately by the human/fronte
       guess: z.string().min(5).max(5).describe("The 5-letter word guess."),
     },
     async (input) => asToolText(submitWordlyGuess(input)),
+  );
+
+  server.tool(
+    "battleship_how_to_play",
+    "Read the Battleship MCP rules, board coordinates, fleet sizes, and AI strategy.",
+    {},
+    async () => asToolText({ guide: battleshipHowToPlay }),
+  );
+
+  server.tool(
+    "start_battleship_round",
+    "Start a new Battleship round on a 6 by 4 board.",
+    {},
+    async () => asToolText(startBattleshipRound()),
+  );
+
+  server.tool(
+    "get_battleship_status",
+    "Get Battleship status. This includes AI ship positions, but never human ship positions.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active Battleship round."),
+    },
+    async ({ roundId }) => asToolText(getBattleshipStatus({ roundId, includeAiShips: true })),
+  );
+
+  const shipPlacementSchema = z.object({
+    id: z.string().optional(),
+    start: z.string().optional().describe("Start coordinate like A1."),
+    length: z.number().int().min(2).max(3),
+    orientation: z.enum(["horizontal", "vertical"]),
+    cells: z.array(z.string()).optional().describe("Optional exact cells like ['A1','A2']."),
+  });
+
+  server.tool(
+    "place_battleship_ai_fleet",
+    "Place the AI fleet. Use one length-3 ship and two length-2 ships. Coordinates are A1 to D6.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active Battleship round."),
+      ships: z.array(shipPlacementSchema).length(3),
+    },
+    async ({ roundId, ships }) => asToolText(placeBattleshipFleet({ roundId, owner: "ai", ships })),
+  );
+
+  server.tool(
+    "submit_battleship_attack",
+    "Attack the human sea with a coordinate like A2. Returns water or hit, without revealing human ships.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active Battleship round."),
+      cell: z.string().describe("Coordinate from A1 to D6."),
+    },
+    async ({ roundId, cell }) => asToolText(submitBattleshipAttack({ roundId, attacker: "ai", cell })),
   );
 
   return server;

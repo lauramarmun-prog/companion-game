@@ -26,6 +26,14 @@ The first pilot game is Hangman. Wordly and Tic-Tac-Toe are also available. The 
 - `get_wordly_status`: returns guesses, hit/near/miss scores, remaining guesses, and status.
 - `submit_wordly_guess`: submits a 5-letter guess.
 
+## Battleship tools
+
+- `battleship_how_to_play`: returns board coordinates, fleet sizes, and AI strategy notes.
+- `start_battleship_round`: starts a 6 by 4 round.
+- `get_battleship_status`: returns public status plus AI ship positions for the AI only.
+- `place_battleship_ai_fleet`: lets the AI place one length-3 ship and two length-2 ships.
+- `submit_battleship_attack`: attacks a coordinate like A2 and returns `agua` or `tocado`.
+
 For production, rounds where the AI guesses should be created by the private web backend/frontend bridge, because the secret word must not be passed through a visible AI tool call. For local testing, `start_hangman_round` accepts a secret word in `ai` mode so we can exercise the full logic before the web bridge exists.
 
 ## HTTP backend
@@ -49,6 +57,10 @@ Useful API calls:
 - `POST /api/wordly/round`
 - `GET /api/wordly/status`
 - `POST /api/wordly/guess`
+- `POST /api/battleship/round`
+- `GET /api/battleship/status`
+- `POST /api/battleship/fleet`
+- `POST /api/battleship/attack`
 
 For local development:
 

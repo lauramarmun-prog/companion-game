@@ -1,3 +1,4 @@
+import { placeBattleshipFleet, startBattleshipRound, submitBattleshipAttack } from "./battleship.js";
 import { getHangmanStatus, startHangmanRound, submitHangmanLetter, submitHangmanWord } from "./hangman.js";
 import { startTicTacToeRound, submitTicTacToeMove } from "./ticTacToe.js";
 import { startWordlyRound, submitWordlyGuess } from "./wordly.js";
@@ -26,3 +27,19 @@ console.log("WORDLY HIT", submitWordlyGuess({ roundId: wordly.roundId, guess: "c
 
 const pendingWordly = startWordlyRound({ turn: "ai" });
 console.log("WORDLY AI PENDING", pendingWordly);
+
+const battle = startBattleshipRound();
+console.log("BATTLE START", battle);
+console.log(
+  "BATTLE FLEET",
+  placeBattleshipFleet({
+    roundId: battle.roundId,
+    owner: "human",
+    ships: [
+      { length: 3, start: "A1", orientation: "horizontal" },
+      { length: 2, start: "B1", orientation: "horizontal" },
+      { length: 2, start: "C1", orientation: "horizontal" },
+    ],
+  }),
+);
+console.log("BATTLE ATTACK", submitBattleshipAttack({ roundId: battle.roundId, attacker: "human", cell: "A1" }));

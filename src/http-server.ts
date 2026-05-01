@@ -5,6 +5,13 @@ import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import {
+  getBattleshipStatus,
+  placeBattleshipFleet,
+  startBattleshipRound,
+  submitBattleshipAttack,
+  type BattleshipOwner,
+} from "./battleship.js";
+import {
   getHangmanStatus,
   startHangmanRound,
   submitHangmanLetter,
@@ -57,13 +64,14 @@ app.get("/", (_req, res) => {
   res.json({
     ok: true,
     name: "mcp-companion-game",
-    version: "0.1.3",
+    version: "0.1.4",
     features: [
       "hangman-status",
       "hangman-letter-guess",
       "hangman-word-guess",
       "tic-tac-toe",
       "wordly",
+      "battleship",
       "empty-status-ok",
     ],
     mcp: "/mcp",
@@ -79,6 +87,10 @@ app.get("/", (_req, res) => {
       startWordlyRound: "POST /api/wordly/round",
       getWordlyStatus: "GET /api/wordly/status/:roundId?",
       submitWordlyGuess: "POST /api/wordly/guess",
+      startBattleshipRound: "POST /api/battleship/round",
+      getBattleshipStatus: "GET /api/battleship/status/:roundId?",
+      placeBattleshipFleet: "POST /api/battleship/fleet",
+      submitBattleshipAttack: "POST /api/battleship/attack",
     },
   });
 });
@@ -255,6 +267,67 @@ app.post("/api/wordly/guess", (req, res) => {
     const result = submitWordlyGuess({
       roundId: body.roundId,
       guess: body.guess ?? "",
+    });
+    res.json({ ok: true, result });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post("/api/battleship/round", (_req, res) => {
+  try {
+    res.json({ ok: true, status: startBattleshipRound() });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.get("/api/battleship/status", (_req, res) => {
+  try {
+    res.json({ ok: true, status: getBattleshipStatus() });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    if (message === "No battleship round has been started yet.") {
+      res.json({ ok: true, status: null, needsRound: true });
+      return;
+    }
+    sendApiError(res, error);
+  }
+});
+
+app.get("/api/battleship/status/:roundId", (req, res) => {
+  try {
+    res.json({ ok: true, status: getBattleshipStatus({ roundId: req.params["roundId"] }) });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post("/api/battleship/fleet", (req, res) => {
+  try {
+    const body = req.body as {
+      roundId?: string;
+      owner?: BattleshipOwner;
+      ships?: Array<{ id?: string; start?: string; length: number; orientation: "horizontal" | "vertical"; cells?: string[] }>;
+    };
+    const status = placeBattleshipFleet({
+      roundId: body.roundId,
+      owner: body.owner ?? "human",
+      ships: body.ships ?? [],
+    });
+    res.json({ ok: true, status });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post("/api/battleship/attack", (req, res) => {
+  try {
+    const body = req.body as { roundId?: string; attacker?: BattleshipOwner; cell?: string };
+    const result = submitBattleshipAttack({
+      roundId: body.roundId,
+      attacker: body.attacker ?? "human",
+      cell: body.cell ?? "",
     });
     res.json({ ok: true, result });
   } catch (error) {
