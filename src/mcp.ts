@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { getBattleshipStatus, placeBattleshipFleet, startBattleshipRound, submitBattleshipAttack } from "./battleship.js";
+import { getGuessWhoStatus, setGuessWhoSecret, startGuessWhoRound, submitGuessWhoFinalGuess } from "./guessWho.js";
 import { getHangmanStatus, startHangmanRound, submitHangmanLetter, submitHangmanWord } from "./hangman.js";
 import { getTicTacToeStatus, startTicTacToeRound, submitTicTacToeMove } from "./ticTacToe.js";
 import { getWordlyStatus, startWordlyRound, submitWordlyGuess } from "./wordly.js";
@@ -301,6 +302,66 @@ Strategy:
 3. Track misses so you do not repeat a coordinate.
 4. Remember the fleet lengths: 4, 3, 3, and 2.`;
 
+const guessWhoHowToPlay = `# Guess Who? MCP - Game Guide for AIs
+
+Guess Who? is a character guessing game. One side secretly chooses a character. The other side asks yes-or-no questions and narrows the board until they can guess the character.
+
+## Turns
+
+turn="human":
+- The human is guessing.
+- Use start_guess_who_round with turn="human".
+- Read the returned character list, secretly choose one character, and remember it.
+- Do not say the secret character out loud.
+- The human asks you yes-or-no questions in chat.
+- You usually do not need to call the MCP again unless you want to check the character list.
+
+turn="ai":
+- You, the AI, are guessing.
+- The human chooses a secret character in the frontend.
+- Use get_guess_who_status to read the public character list.
+- Ask yes-or-no questions in chat.
+- Track the answers in your own reasoning and eliminate characters mentally.
+- When confident, use submit_guess_who_final_guess.
+
+## Available tools
+
+start_guess_who_round:
+- Starts a new round.
+- Parameters:
+  - turn: "human" or "ai".
+  - secretName: optional, normally only used by the frontend/API. Do not use this to reveal the human's secret to yourself.
+
+get_guess_who_status:
+- Returns the public state and character list.
+- While playing, it never reveals the secret character.
+
+set_guess_who_secret:
+- Sets the secret character for the current round.
+- Intended for frontend/API use when the human has chosen a character.
+- If you are the AI guesser, do not call this yourself.
+
+submit_guess_who_final_guess:
+- Submit your final character guess.
+- Returns whether it was correct.
+
+## Question strategy
+
+Ask broad visual questions first:
+- Is the character a man?
+- Does the character have red hair?
+- Does the character wear glasses?
+- Does the character have dark hair?
+- Does the character wear a hat, scarf, or necklace?
+
+Then narrow down with specific details:
+- Does the character have blue eyes?
+- Does the character have freckles?
+- Does the character wear a hoodie?
+- Does the character have purple or turquoise hair details?
+
+Keep your secret if the human is guessing. If you are guessing, only submit a final guess when the answers make one character likely.`;
+
 export function createCompanionMcpServer() {
   const server = new McpServer({
     name: "mcp-companion-game",
@@ -312,6 +373,59 @@ export function createCompanionMcpServer() {
     "Read the Hangman MCP rules, available tools, full game flow, and strategy guide for AIs.",
     {},
     async () => asToolText({ guide: hangmanHowToPlay }),
+  );
+
+  server.tool(
+    "guess_who_how_to_play",
+    "Read the Guess Who? MCP rules, turns, available tools, and question strategy for AIs.",
+    {},
+    async () => asToolText({ guide: guessWhoHowToPlay }),
+  );
+
+  server.tool(
+    "start_guess_who_round",
+    `Start a new Guess Who? round.
+
+Use turn="human" when the human will guess. In that mode, read the character list, secretly choose one, remember it, and answer the human's yes-or-no questions in chat without revealing the secret.
+
+Use turn="ai" when you, the AI, will guess a character chosen privately by the human/frontend. The status never reveals the secret while playing.`,
+    {
+      turn: z.enum(["human", "ai"]).optional().describe("Who is guessing. Defaults to human."),
+      secretName: z
+        .string()
+        .optional()
+        .describe("Optional secret character name. Intended for frontend/API use; do not use this to reveal a human secret to yourself."),
+    },
+    async (input) => asToolText(startGuessWhoRound(input)),
+  );
+
+  server.tool(
+    "get_guess_who_status",
+    "Get the public Guess Who? status and character list. This does not reveal the secret character while the round is playing.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active Guess Who? round."),
+    },
+    async ({ roundId }) => asToolText(getGuessWhoStatus(roundId)),
+  );
+
+  server.tool(
+    "set_guess_who_secret",
+    "Set the secret Guess Who? character for the active round. Intended for frontend/API use when the human chooses a character.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active Guess Who? round."),
+      secretName: z.string().min(1).describe("Character name from the Guess Who? character list."),
+    },
+    async (input) => asToolText(setGuessWhoSecret(input)),
+  );
+
+  server.tool(
+    "submit_guess_who_final_guess",
+    "Submit a final Guess Who? character guess. Use only when you are confident.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active Guess Who? round."),
+      guess: z.string().min(1).describe("Character name from the Guess Who? character list."),
+    },
+    async (input) => asToolText(submitGuessWhoFinalGuess(input)),
   );
 
   server.tool(

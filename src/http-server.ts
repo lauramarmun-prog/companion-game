@@ -12,6 +12,13 @@ import {
   type BattleshipOwner,
 } from "./battleship.js";
 import {
+  getGuessWhoStatus,
+  setGuessWhoSecret,
+  startGuessWhoRound,
+  submitGuessWhoFinalGuess,
+  type GuessWhoTurn,
+} from "./guessWho.js";
+import {
   getHangmanStatus,
   startHangmanRound,
   submitHangmanLetter,
@@ -72,6 +79,7 @@ app.get("/", (_req, res) => {
       "tic-tac-toe",
       "wordly",
       "battleship",
+      "guess-who",
       "empty-status-ok",
     ],
     mcp: "/mcp",
@@ -91,6 +99,10 @@ app.get("/", (_req, res) => {
       getBattleshipStatus: "GET /api/battleship/status/:roundId?",
       placeBattleshipFleet: "POST /api/battleship/fleet",
       submitBattleshipAttack: "POST /api/battleship/attack",
+      startGuessWhoRound: "POST /api/guess-who/round",
+      getGuessWhoStatus: "GET /api/guess-who/status/:roundId?",
+      setGuessWhoSecret: "POST /api/guess-who/secret",
+      submitGuessWhoFinalGuess: "POST /api/guess-who/guess",
     },
   });
 });
@@ -328,6 +340,66 @@ app.post("/api/battleship/attack", (req, res) => {
       roundId: body.roundId,
       attacker: body.attacker ?? "human",
       cell: body.cell ?? "",
+    });
+    res.json({ ok: true, result });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post("/api/guess-who/round", (req, res) => {
+  try {
+    const body = req.body as { turn?: GuessWhoTurn; secretName?: string };
+    const status = startGuessWhoRound({
+      turn: body.turn,
+      secretName: body.secretName,
+    });
+    res.json({ ok: true, status });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.get("/api/guess-who/status", (_req, res) => {
+  try {
+    res.json({ ok: true, status: getGuessWhoStatus() });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    if (message === "No guess who round has been started yet.") {
+      res.json({ ok: true, status: null, needsRound: true });
+      return;
+    }
+    sendApiError(res, error);
+  }
+});
+
+app.get("/api/guess-who/status/:roundId", (req, res) => {
+  try {
+    res.json({ ok: true, status: getGuessWhoStatus(req.params["roundId"]) });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post("/api/guess-who/secret", (req, res) => {
+  try {
+    const body = req.body as { roundId?: string; secretName?: string };
+    const status = setGuessWhoSecret({
+      roundId: body.roundId,
+      secretName: body.secretName ?? "",
+    });
+    res.json({ ok: true, status });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post("/api/guess-who/guess", (req, res) => {
+  try {
+    const body = req.body as { roundId?: string; guess?: string };
+    const result = submitGuessWhoFinalGuess({
+      roundId: body.roundId,
+      guess: body.guess ?? "",
     });
     res.json({ ok: true, result });
   } catch (error) {

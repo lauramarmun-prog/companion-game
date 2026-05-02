@@ -1,4 +1,5 @@
 import { placeBattleshipFleet, startBattleshipRound, submitBattleshipAttack } from "./battleship.js";
+import { getGuessWhoStatus, setGuessWhoSecret, startGuessWhoRound, submitGuessWhoFinalGuess } from "./guessWho.js";
 import { getHangmanStatus, startHangmanRound, submitHangmanLetter, submitHangmanWord } from "./hangman.js";
 import { startTicTacToeRound, submitTicTacToeMove } from "./ticTacToe.js";
 import { startWordlyRound, submitWordlyGuess } from "./wordly.js";
@@ -44,3 +45,12 @@ console.log(
   }),
 );
 console.log("BATTLE ATTACK", submitBattleshipAttack({ roundId: battle.roundId, attacker: "human", cell: "A1" }));
+
+const guessWhoHuman = startGuessWhoRound({ turn: "human" });
+console.log("GUESS WHO HUMAN START", guessWhoHuman.characterCount, guessWhoHuman.hasSecretCharacter);
+console.log("GUESS WHO HUMAN STATUS", getGuessWhoStatus(guessWhoHuman.roundId).characters[0]);
+
+const guessWhoAi = startGuessWhoRound({ turn: "ai" });
+console.log("GUESS WHO AI START", guessWhoAi.status, guessWhoAi.hasSecretCharacter);
+console.log("GUESS WHO SECRET SET", setGuessWhoSecret({ roundId: guessWhoAi.roundId, secretName: "Laura" }).hasSecretCharacter);
+console.log("GUESS WHO GUESS", submitGuessWhoFinalGuess({ roundId: guessWhoAi.roundId, guess: "Laura" }));
