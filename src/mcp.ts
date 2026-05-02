@@ -275,10 +275,9 @@ submit_wordly_guess(guess="cloud")
 
 const battleshipHowToPlay = `# Battleship MCP - Game Guide for AIs
 
-Battleship is played on a 10 by 10 board. Columns are 1 to 10. Rows are A to J. Coordinates look like A1, A2, B4, J10.
+Battleship is played on an 8 by 8 board. Columns are 1 to 8. Rows are A to H. Coordinates look like A1, A2, B4, H8.
 
 Fleet:
-- 1 carrier with 5 cells.
 - 1 battleship with 4 cells.
 - 1 cruiser with 3 cells.
 - 1 submarine with 3 cells.
@@ -300,7 +299,7 @@ Strategy:
 1. Attack checkerboard-style first.
 2. When you hit, attack adjacent cells.
 3. Track misses so you do not repeat a coordinate.
-4. Remember the fleet lengths: 5, 4, 3, 3, and 2.`;
+4. Remember the fleet lengths: 4, 3, 3, and 2.`;
 
 export function createCompanionMcpServer() {
   const server = new McpServer({
@@ -458,7 +457,7 @@ Use turn="ai" when the AI will guess a word chosen privately by the human/fronte
 
   server.tool(
     "start_battleship_round",
-    "Start a new Battleship round on a 10 by 10 board.",
+    "Start a new Battleship round on an 8 by 8 board.",
     {},
     async () => asToolText(startBattleshipRound()),
   );
@@ -482,10 +481,10 @@ Use turn="ai" when the AI will guess a word chosen privately by the human/fronte
 
   server.tool(
     "place_battleship_ai_fleet",
-    "Place the AI fleet. Use ship lengths 5, 4, 3, 3, and 2. Coordinates are A1 to J10.",
+    "Place the AI fleet. Use ship lengths 4, 3, 3, and 2. Coordinates are A1 to H8.",
     {
       roundId: z.string().optional().describe("Defaults to the active Battleship round."),
-      ships: z.array(shipPlacementSchema).length(5),
+      ships: z.array(shipPlacementSchema).length(4),
     },
     async ({ roundId, ships }) => asToolText(placeBattleshipFleet({ roundId, owner: "ai", ships })),
   );
@@ -495,7 +494,7 @@ Use turn="ai" when the AI will guess a word chosen privately by the human/fronte
     "Attack the human sea with a coordinate like A2. Returns water or hit, without revealing human ships.",
     {
       roundId: z.string().optional().describe("Defaults to the active Battleship round."),
-      cell: z.string().describe("Coordinate from A1 to J10."),
+      cell: z.string().describe("Coordinate from A1 to H8."),
     },
     async ({ roundId, cell }) => asToolText(submitBattleshipAttack({ roundId, attacker: "ai", cell })),
   );

@@ -29,9 +29,9 @@ The first pilot game is Hangman. Wordly and Tic-Tac-Toe are also available. The 
 ## Battleship tools
 
 - `battleship_how_to_play`: returns board coordinates, fleet sizes, and AI strategy notes.
-- `start_battleship_round`: starts a 10 by 10 round.
+- `start_battleship_round`: starts an 8 by 8 round.
 - `get_battleship_status`: returns public status plus AI ship positions for the AI only.
-- `place_battleship_ai_fleet`: lets the AI place ships with lengths 5, 4, 3, 3, and 2.
+- `place_battleship_ai_fleet`: lets the AI place ships with lengths 4, 3, 3, and 2.
 - `submit_battleship_attack`: attacks a coordinate like A2 and returns `agua` or `tocado`.
 
 For production, rounds where the AI guesses should be created by the private web backend/frontend bridge, because the secret word must not be passed through a visible AI tool call. For local testing, `start_hangman_round` accepts a secret word in `ai` mode so we can exercise the full logic before the web bridge exists.

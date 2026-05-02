@@ -22,10 +22,9 @@ export type BattleshipRound = {
   updatedAt: string;
 };
 
-const rows = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"] as const;
-const cols = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+const rows = ["A", "B", "C", "D", "E", "F", "G", "H"] as const;
+const cols = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 const fleet = [
-  { id: "carrier", name: "Carrier", length: 5 },
   { id: "battleship", name: "Battleship", length: 4 },
   { id: "cruiser", name: "Cruiser", length: 3 },
   { id: "submarine", name: "Submarine", length: 3 },
@@ -52,7 +51,7 @@ function parseCell(cell: string): { row: number; col: number; id: BattleshipCell
   const row = rows.indexOf(normalized[0] as (typeof rows)[number]);
   const colNumber = Number(normalized.slice(1));
   const col = cols.indexOf(colNumber as (typeof cols)[number]);
-  if (row === -1 || col === -1) throw new Error(`Invalid coordinate: ${cell}. Use A1 to J10.`);
+  if (row === -1 || col === -1) throw new Error(`Invalid coordinate: ${cell}. Use A1 to H8.`);
   return { row, col, id: normalized as BattleshipCell };
 }
 
@@ -71,11 +70,11 @@ function occupiedShips(ships: ShipSpec[]) {
 }
 
 function validateFleet(ships: ShipSpec[]) {
-  if (ships.length !== fleet.length) throw new Error("Fleet needs ships with lengths 5, 4, 3, 3, and 2.");
+  if (ships.length !== fleet.length) throw new Error("Fleet needs ships with lengths 4, 3, 3, and 2.");
   const lengths = ships.map((ship) => ship.cells.length).sort().join(",");
-  if (lengths !== "2,3,3,4,5") throw new Error("Fleet must use ship lengths 5, 4, 3, 3, and 2.");
+  if (lengths !== "2,3,3,4") throw new Error("Fleet must use ship lengths 4, 3, 3, and 2.");
   const occupied = occupiedShips(ships);
-  if (occupied.size !== 17) throw new Error("Ships cannot overlap.");
+  if (occupied.size !== 12) throw new Error("Ships cannot overlap.");
 }
 
 function makeRandomFleet() {
