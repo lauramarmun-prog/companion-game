@@ -23,7 +23,7 @@ const wordlyRounds = new Map<string, WordlyRound>();
 let activeWordlyRoundId: string | undefined;
 
 function createId() {
-  return `wordly_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  return `word_quest_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function now() {
@@ -93,10 +93,10 @@ export function startWordlyRound(input: {
   const turn = input.turn ?? "human";
   const secretWord = input.secretWord ? cleanWord(input.secretWord) : undefined;
   if (secretWord && secretWord.length !== 5) {
-    throw new Error("Wordly needs a secret word with exactly 5 letters.");
+    throw new Error("Word Quest needs a secret word with exactly 5 letters.");
   }
   if (turn === "human" && !secretWord) {
-    throw new Error("A human Wordly turn needs a secret word from the AI.");
+    throw new Error("A human Word Quest turn needs a secret word from the AI.");
   }
 
   const timestamp = now();
@@ -118,20 +118,20 @@ export function startWordlyRound(input: {
 }
 
 export function getWordlyStatus(roundId = activeWordlyRoundId) {
-  if (!roundId) throw new Error("No wordly round has been started yet.");
+  if (!roundId) throw new Error("No word quest round has been started yet.");
 
   const round = wordlyRounds.get(roundId);
-  if (!round) throw new Error(`Wordly round not found: ${roundId}`);
+  if (!round) throw new Error(`Word Quest round not found: ${roundId}`);
 
   return getPublicStatus(round);
 }
 
 export function submitWordlyGuess(input: { roundId?: string; guess: string }) {
   const roundId = input.roundId ?? activeWordlyRoundId;
-  if (!roundId) throw new Error("No wordly round has been started yet.");
+  if (!roundId) throw new Error("No word quest round has been started yet.");
 
   const round = wordlyRounds.get(roundId);
-  if (!round) throw new Error(`Wordly round not found: ${roundId}`);
+  if (!round) throw new Error(`Word Quest round not found: ${roundId}`);
   if (round.status !== "playing") {
     return {
       accepted: false,
@@ -140,12 +140,12 @@ export function submitWordlyGuess(input: { roundId?: string; guess: string }) {
     };
   }
   if (!round.secretWord) {
-    throw new Error("This Wordly round does not have a private secret word yet.");
+    throw new Error("This Word Quest round does not have a private secret word yet.");
   }
 
   const guess = cleanWord(input.guess);
   if (guess.length !== 5) {
-    throw new Error("Wordly guesses must have exactly 5 letters.");
+    throw new Error("Word Quest guesses must have exactly 5 letters.");
   }
 
   const score = scoreGuess(guess, round.secretWord);

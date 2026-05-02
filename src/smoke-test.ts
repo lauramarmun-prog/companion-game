@@ -22,17 +22,17 @@ console.log("TIC X", submitTicTacToeMove({ roundId: tic.roundId, index: 4, playe
 console.log("TIC O", submitTicTacToeMove({ roundId: tic.roundId, index: 0, player: "O" }));
 
 const wordly = startWordlyRound({ turn: "human", secretWord: "cloud", clue: "Where apps often live." });
-console.log("WORDLY START", wordly);
-console.log("WORDLY MISS", submitWordlyGuess({ roundId: wordly.roundId, guess: "paper" }));
-console.log("WORDLY HIT", submitWordlyGuess({ roundId: wordly.roundId, guess: "cloud" }));
+console.log("WORD QUEST START", wordly);
+console.log("WORD QUEST MISS", submitWordlyGuess({ roundId: wordly.roundId, guess: "paper" }));
+console.log("WORD QUEST HIT", submitWordlyGuess({ roundId: wordly.roundId, guess: "cloud" }));
 
 const pendingWordly = startWordlyRound({ turn: "ai" });
-console.log("WORDLY AI PENDING", pendingWordly);
+console.log("WORD QUEST AI PENDING", pendingWordly);
 
 const battle = startBattleshipRound();
-console.log("BATTLE START", battle);
+console.log("HIDDEN FLEET START", battle);
 console.log(
-  "BATTLE FLEET",
+  "HIDDEN FLEET FLEET",
   placeBattleshipFleet({
     roundId: battle.roundId,
     owner: "human",
@@ -44,13 +44,13 @@ console.log(
     ],
   }),
 );
-console.log("BATTLE ATTACK", submitBattleshipAttack({ roundId: battle.roundId, attacker: "human", cell: "A1" }));
+console.log("HIDDEN FLEET ATTACK", submitBattleshipAttack({ roundId: battle.roundId, attacker: "human", cell: "A1" }));
 
 const guessWhoHuman = startGuessWhoRound({ turn: "human" });
-console.log("GUESS WHO HUMAN START", guessWhoHuman.characterCount, guessWhoHuman.hasSecretCharacter);
-console.log("GUESS WHO HUMAN STATUS", getGuessWhoStatus(guessWhoHuman.roundId).characters[0]);
+console.log("WHO IS IT HUMAN START", guessWhoHuman.characterCount, guessWhoHuman.hasSecretCharacter);
+console.log("WHO IS IT HUMAN STATUS", getGuessWhoStatus(guessWhoHuman.roundId).characters[0]);
 
 const guessWhoAi = startGuessWhoRound({ turn: "ai" });
-console.log("GUESS WHO AI START", guessWhoAi.status, guessWhoAi.hasSecretCharacter);
-console.log("GUESS WHO SECRET SET", setGuessWhoSecret({ roundId: guessWhoAi.roundId, secretName: "Laura" }).hasSecretCharacter);
-console.log("GUESS WHO GUESS", submitGuessWhoFinalGuess({ roundId: guessWhoAi.roundId, guess: "Laura" }));
+console.log("WHO IS IT AI START", guessWhoAi.status, guessWhoAi.hasSecretCharacter);
+console.log("WHO IS IT SECRET SET", setGuessWhoSecret({ roundId: guessWhoAi.roundId, secretName: "Laura" }).hasSecretCharacter);
+console.log("WHO IS IT GUESS", submitGuessWhoFinalGuess({ roundId: guessWhoAi.roundId, guess: "Laura" }));

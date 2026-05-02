@@ -220,9 +220,9 @@ Parameters:
 
 Always check availableMoves before moving.`;
 
-const wordlyHowToPlay = `# Wordly MCP - Game Guide for AIs
+const wordlyHowToPlay = `# Word Quest MCP - Game Guide for AIs
 
-Wordly is a five-letter word guessing game. A secret word is chosen, then the guesser has 6 attempts to find it.
+Word Quest is a five-letter word guessing game. A secret word is chosen, then the guesser has 6 attempts to find it.
 
 Each guess returns 5 letter scores:
 - hit: the letter is correct and in the correct position.
@@ -231,7 +231,7 @@ Each guess returns 5 letter scores:
 
 ## Available tools
 
-### start_wordly_round
+### start_word_quest_round
 
 Starts a new round.
 
@@ -244,10 +244,10 @@ Parameters:
 
 Example:
 \`\`\`text
-start_wordly_round(turn="human", secretWord="cloud", clue="Where apps often live")
+start_word_quest_round(turn="human", secretWord="cloud", clue="Where apps often live")
 \`\`\`
 
-### get_wordly_status
+### get_word_quest_status
 
 Returns the public state:
 - guesses: submitted words and their scores.
@@ -257,13 +257,13 @@ Returns the public state:
 - status: "playing", "won", or "lost".
 - answer: null while playing, revealed only after the round ends.
 
-### submit_wordly_guess
+### submit_word_quest_guess
 
 Submit a 5-letter word guess.
 
 Example:
 \`\`\`text
-submit_wordly_guess(guess="cloud")
+submit_word_quest_guess(guess="cloud")
 \`\`\`
 
 ## Strategy for AIs
@@ -274,12 +274,12 @@ submit_wordly_guess(guess="cloud")
 4. Avoid miss letters in later guesses.
 5. Use the clue if one is provided, but trust the letter scores most.`;
 
-const battleshipHowToPlay = `# Battleship MCP - Game Guide for AIs
+const battleshipHowToPlay = `# Hidden Fleet MCP - Game Guide for AIs
 
-Battleship is played on an 8 by 8 board. Columns are 1 to 8. Rows are A to H. Coordinates look like A1, A2, B4, H8.
+Hidden Fleet is played on an 8 by 8 board. Columns are 1 to 8. Rows are A to H. Coordinates look like A1, A2, B4, H8.
 
 Fleet:
-- 1 battleship with 4 cells.
+- 1 flagship with 4 cells.
 - 1 cruiser with 3 cells.
 - 1 submarine with 3 cells.
 - 1 destroyer with 2 cells.
@@ -288,13 +288,13 @@ Ships can be horizontal or vertical and cannot overlap.
 
 The human places ships privately in the frontend. You know the human fleet is ready, but you never receive the human ship positions.
 
-Your AI fleet can be placed with place_battleship_ai_fleet. If you do not place it, the backend starts with a random AI fleet.
+Your AI fleet can be placed with place_hidden_fleet_ai_fleet. If you do not place it, the backend starts with a random AI fleet.
 
 Tools:
-- start_battleship_round: starts a new round.
-- get_battleship_status: returns board, shots, ready flags, sunk ships, and your AI ship positions.
-- place_battleship_ai_fleet: places your fleet. Use starts like A1 with orientation horizontal or vertical.
-- submit_battleship_attack: attack the human sea with a coordinate. The API returns hit or miss, and sunk when a ship is completed.
+- start_hidden_fleet_round: starts a new round.
+- get_hidden_fleet_status: returns board, shots, ready flags, sunk ships, and your AI ship positions.
+- place_hidden_fleet_ai_fleet: places your fleet. Use starts like A1 with orientation horizontal or vertical.
+- submit_hidden_fleet_attack: attack the human sea with a coordinate. The API returns hit or miss, and sunk when a ship is completed.
 
 Strategy:
 1. Attack checkerboard-style first.
@@ -302,15 +302,15 @@ Strategy:
 3. Track misses so you do not repeat a coordinate.
 4. Remember the fleet lengths: 4, 3, 3, and 2.`;
 
-const guessWhoHowToPlay = `# Guess Who? MCP - Game Guide for AIs
+const guessWhoHowToPlay = `# Who is it? MCP - Game Guide for AIs
 
-Guess Who? is a character guessing game. One side secretly chooses a character. The other side asks yes-or-no questions and narrows the board until they can guess the character.
+Who is it? is a character guessing game. One side secretly chooses a character. The other side asks yes-or-no questions and narrows the board until they can guess the character.
 
 ## Turns
 
 turn="human":
 - The human is guessing.
-- Use start_guess_who_round with turn="human".
+- Use start_who_is_it_round with turn="human".
 - Read the returned character list, secretly choose one character, and remember it.
 - Do not say the secret character out loud.
 - The human asks you yes-or-no questions in chat.
@@ -319,29 +319,29 @@ turn="human":
 turn="ai":
 - You, the AI, are guessing.
 - The human chooses a secret character in the frontend.
-- Use get_guess_who_status to read the public character list.
+- Use get_who_is_it_status to read the public character list.
 - Ask yes-or-no questions in chat.
 - Track the answers in your own reasoning and eliminate characters mentally.
-- When confident, use submit_guess_who_final_guess.
+- When confident, use submit_who_is_it_final_guess.
 
 ## Available tools
 
-start_guess_who_round:
+start_who_is_it_round:
 - Starts a new round.
 - Parameters:
   - turn: "human" or "ai".
   - secretName: optional, normally only used by the frontend/API. Do not use this to reveal the human's secret to yourself.
 
-get_guess_who_status:
+get_who_is_it_status:
 - Returns the public state and character list.
 - While playing, it never reveals the secret character.
 
-set_guess_who_secret:
+set_who_is_it_secret:
 - Sets the secret character for the current round.
 - Intended for frontend/API use when the human has chosen a character.
 - If you are the AI guesser, do not call this yourself.
 
-submit_guess_who_final_guess:
+submit_who_is_it_final_guess:
 - Submit your final character guess.
 - Returns whether it was correct.
 
@@ -376,15 +376,15 @@ export function createCompanionMcpServer() {
   );
 
   server.tool(
-    "guess_who_how_to_play",
-    "Read the Guess Who? MCP rules, turns, available tools, and question strategy for AIs.",
+    "who_is_it_how_to_play",
+    "Read the Who is it? MCP rules, turns, available tools, and question strategy for AIs.",
     {},
     async () => asToolText({ guide: guessWhoHowToPlay }),
   );
 
   server.tool(
-    "start_guess_who_round",
-    `Start a new Guess Who? round.
+    "start_who_is_it_round",
+    `Start a new Who is it? round.
 
 Use turn="human" when the human will guess. In that mode, read the character list, secretly choose one, remember it, and answer the human's yes-or-no questions in chat without revealing the secret.
 
@@ -400,30 +400,30 @@ Use turn="ai" when you, the AI, will guess a character chosen privately by the h
   );
 
   server.tool(
-    "get_guess_who_status",
-    "Get the public Guess Who? status and character list. This does not reveal the secret character while the round is playing.",
+    "get_who_is_it_status",
+    "Get the public Who is it? status and character list. This does not reveal the secret character while the round is playing.",
     {
-      roundId: z.string().optional().describe("Defaults to the active Guess Who? round."),
+      roundId: z.string().optional().describe("Defaults to the active Who is it? round."),
     },
     async ({ roundId }) => asToolText(getGuessWhoStatus(roundId)),
   );
 
   server.tool(
-    "set_guess_who_secret",
-    "Set the secret Guess Who? character for the active round. Intended for frontend/API use when the human chooses a character.",
+    "set_who_is_it_secret",
+    "Set the secret Who is it? character for the active round. Intended for frontend/API use when the human chooses a character.",
     {
-      roundId: z.string().optional().describe("Defaults to the active Guess Who? round."),
-      secretName: z.string().min(1).describe("Character name from the Guess Who? character list."),
+      roundId: z.string().optional().describe("Defaults to the active Who is it? round."),
+      secretName: z.string().min(1).describe("Character name from the Who is it? character list."),
     },
     async (input) => asToolText(setGuessWhoSecret(input)),
   );
 
   server.tool(
-    "submit_guess_who_final_guess",
-    "Submit a final Guess Who? character guess. Use only when you are confident.",
+    "submit_who_is_it_final_guess",
+    "Submit a final Who is it? character guess. Use only when you are confident.",
     {
-      roundId: z.string().optional().describe("Defaults to the active Guess Who? round."),
-      guess: z.string().min(1).describe("Character name from the Guess Who? character list."),
+      roundId: z.string().optional().describe("Defaults to the active Who is it? round."),
+      guess: z.string().min(1).describe("Character name from the Who is it? character list."),
     },
     async (input) => asToolText(submitGuessWhoFinalGuess(input)),
   );
@@ -521,15 +521,15 @@ Use turn="ai" when the AI will guess a word chosen by the human/frontend. For pr
   );
 
   server.tool(
-    "wordly_how_to_play",
-    "Read the Wordly MCP rules, scoring meanings, available tools, and strategy guide for AIs.",
+    "word_quest_how_to_play",
+    "Read the Word Quest MCP rules, scoring meanings, available tools, and strategy guide for AIs.",
     {},
     async () => asToolText({ guide: wordlyHowToPlay }),
   );
 
   server.tool(
-    "start_wordly_round",
-    `Start a new Wordly round.
+    "start_word_quest_round",
+    `Start a new Word Quest round.
 
 Use turn="human" when the human will guess a word chosen by the AI. In that mode, provide secretWord and clue.
 
@@ -544,43 +544,43 @@ Use turn="ai" when the AI will guess a word chosen privately by the human/fronte
   );
 
   server.tool(
-    "get_wordly_status",
-    "Get the public state of the active Wordly round. The answer is hidden while playing.",
+    "get_word_quest_status",
+    "Get the public state of the active Word Quest round. The answer is hidden while playing.",
     {
-      roundId: z.string().optional().describe("Defaults to the active Wordly round."),
+      roundId: z.string().optional().describe("Defaults to the active Word Quest round."),
     },
     async ({ roundId }) => asToolText(getWordlyStatus(roundId)),
   );
 
   server.tool(
-    "submit_wordly_guess",
-    "Submit a 5-letter Wordly guess and receive hit/near/miss scores.",
+    "submit_word_quest_guess",
+    "Submit a 5-letter Word Quest guess and receive hit/near/miss scores.",
     {
-      roundId: z.string().optional().describe("Defaults to the active Wordly round."),
+      roundId: z.string().optional().describe("Defaults to the active Word Quest round."),
       guess: z.string().min(5).max(5).describe("The 5-letter word guess."),
     },
     async (input) => asToolText(submitWordlyGuess(input)),
   );
 
   server.tool(
-    "battleship_how_to_play",
-    "Read the Battleship MCP rules, board coordinates, fleet sizes, and AI strategy.",
+    "hidden_fleet_how_to_play",
+    "Read the Hidden Fleet MCP rules, board coordinates, fleet sizes, and AI strategy.",
     {},
     async () => asToolText({ guide: battleshipHowToPlay }),
   );
 
   server.tool(
-    "start_battleship_round",
-    "Start a new Battleship round on an 8 by 8 board.",
+    "start_hidden_fleet_round",
+    "Start a new Hidden Fleet round on an 8 by 8 board.",
     {},
     async () => asToolText(startBattleshipRound()),
   );
 
   server.tool(
-    "get_battleship_status",
-    "Get Battleship status. This includes AI ship positions, but never human ship positions.",
+    "get_hidden_fleet_status",
+    "Get Hidden Fleet status. This includes AI ship positions, but never human ship positions.",
     {
-      roundId: z.string().optional().describe("Defaults to the active Battleship round."),
+      roundId: z.string().optional().describe("Defaults to the active Hidden Fleet round."),
     },
     async ({ roundId }) => asToolText(getBattleshipStatus({ roundId, includeAiShips: true })),
   );
@@ -588,26 +588,26 @@ Use turn="ai" when the AI will guess a word chosen privately by the human/fronte
   const shipPlacementSchema = z.object({
     id: z.string().optional(),
     start: z.string().optional().describe("Start coordinate like A1."),
-    length: z.number().int().min(2).max(3),
+    length: z.number().int().min(2).max(4),
     orientation: z.enum(["horizontal", "vertical"]),
     cells: z.array(z.string()).optional().describe("Optional exact cells like ['A1','A2']."),
   });
 
   server.tool(
-    "place_battleship_ai_fleet",
+    "place_hidden_fleet_ai_fleet",
     "Place the AI fleet. Use ship lengths 4, 3, 3, and 2. Coordinates are A1 to H8.",
     {
-      roundId: z.string().optional().describe("Defaults to the active Battleship round."),
+      roundId: z.string().optional().describe("Defaults to the active Hidden Fleet round."),
       ships: z.array(shipPlacementSchema).length(4),
     },
     async ({ roundId, ships }) => asToolText(placeBattleshipFleet({ roundId, owner: "ai", ships })),
   );
 
   server.tool(
-    "submit_battleship_attack",
+    "submit_hidden_fleet_attack",
     "Attack the human sea with a coordinate like A2. Returns water or hit, without revealing human ships.",
     {
-      roundId: z.string().optional().describe("Defaults to the active Battleship round."),
+      roundId: z.string().optional().describe("Defaults to the active Hidden Fleet round."),
       cell: z.string().describe("Coordinate from A1 to H8."),
     },
     async ({ roundId, cell }) => asToolText(submitBattleshipAttack({ roundId, attacker: "ai", cell })),

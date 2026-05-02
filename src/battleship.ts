@@ -25,7 +25,7 @@ export type BattleshipRound = {
 const rows = ["A", "B", "C", "D", "E", "F", "G", "H"] as const;
 const cols = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 const fleet = [
-  { id: "battleship", name: "Battleship", length: 4 },
+  { id: "flagship", name: "Flagship", length: 4 },
   { id: "cruiser", name: "Cruiser", length: 3 },
   { id: "submarine", name: "Submarine", length: 3 },
   { id: "destroyer", name: "Destroyer", length: 2 },
@@ -35,7 +35,7 @@ const battleshipRounds = new Map<string, BattleshipRound>();
 let activeBattleshipRoundId: string | undefined;
 
 function createId() {
-  return `battle_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  return `hidden_fleet_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function now() {
@@ -100,9 +100,9 @@ function makeRandomFleet() {
 }
 
 function getRound(roundId = activeBattleshipRoundId) {
-  if (!roundId) throw new Error("No battleship round has been started yet.");
+  if (!roundId) throw new Error("No hidden fleet round has been started yet.");
   const round = battleshipRounds.get(roundId);
-  if (!round) throw new Error(`Battleship round not found: ${roundId}`);
+  if (!round) throw new Error(`Hidden Fleet round not found: ${roundId}`);
   return round;
 }
 

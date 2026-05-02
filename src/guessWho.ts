@@ -238,7 +238,7 @@ export const guessWhoCharacters: GuessWhoCharacter[] = [
 ];
 
 function createId() {
-  return `guess_who_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  return `who_is_it_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function now() {
@@ -259,9 +259,9 @@ function findCharacter(name: string) {
 }
 
 function getRound(roundId = activeGuessWhoRoundId) {
-  if (!roundId) throw new Error("No guess who round has been started yet.");
+  if (!roundId) throw new Error("No who is it round has been started yet.");
   const round = guessWhoRounds.get(roundId);
-  if (!round) throw new Error(`Guess Who round not found: ${roundId}`);
+  if (!round) throw new Error(`Who is it? round not found: ${roundId}`);
   return round;
 }
 
@@ -293,7 +293,7 @@ export function startGuessWhoRound(input: { turn?: GuessWhoTurn; secretName?: st
 
   if (input.secretName) {
     const character = findCharacter(input.secretName);
-    if (!character) throw new Error(`Unknown Guess Who character: ${input.secretName}`);
+    if (!character) throw new Error(`Unknown Who is it? character: ${input.secretName}`);
     secretName = character.name;
   }
 
@@ -319,7 +319,7 @@ export function getGuessWhoStatus(roundId = activeGuessWhoRoundId) {
 export function setGuessWhoSecret(input: { roundId?: string; secretName: string }) {
   const round = getRound(input.roundId);
   const character = findCharacter(input.secretName);
-  if (!character) throw new Error(`Unknown Guess Who character: ${input.secretName}`);
+  if (!character) throw new Error(`Unknown Who is it? character: ${input.secretName}`);
 
   round.secretName = character.name;
   round.status = "playing";
@@ -330,10 +330,10 @@ export function setGuessWhoSecret(input: { roundId?: string; secretName: string 
 
 export function submitGuessWhoFinalGuess(input: { roundId?: string; guess: string }) {
   const round = getRound(input.roundId);
-  if (!round.secretName) throw new Error("This Guess Who round does not have a secret character yet.");
+  if (!round.secretName) throw new Error("This Who is it? round does not have a secret character yet.");
 
   const character = findCharacter(input.guess);
-  if (!character) throw new Error(`Unknown Guess Who character: ${input.guess}`);
+  if (!character) throw new Error(`Unknown Who is it? character: ${input.guess}`);
 
   const correct = character.name === round.secretName;
   round.status = correct ? "won" : "lost";

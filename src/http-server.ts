@@ -77,9 +77,9 @@ app.get("/", (_req, res) => {
       "hangman-letter-guess",
       "hangman-word-guess",
       "tic-tac-toe",
-      "wordly",
-      "battleship",
-      "guess-who",
+      "word-quest",
+      "hidden-fleet",
+      "who-is-it",
       "empty-status-ok",
     ],
     mcp: "/mcp",
@@ -92,17 +92,17 @@ app.get("/", (_req, res) => {
       startTicTacToeRound: "POST /api/tic-tac-toe/round",
       getTicTacToeStatus: "GET /api/tic-tac-toe/status/:roundId?",
       submitTicTacToeMove: "POST /api/tic-tac-toe/move",
-      startWordlyRound: "POST /api/wordly/round",
-      getWordlyStatus: "GET /api/wordly/status/:roundId?",
-      submitWordlyGuess: "POST /api/wordly/guess",
-      startBattleshipRound: "POST /api/battleship/round",
-      getBattleshipStatus: "GET /api/battleship/status/:roundId?",
-      placeBattleshipFleet: "POST /api/battleship/fleet",
-      submitBattleshipAttack: "POST /api/battleship/attack",
-      startGuessWhoRound: "POST /api/guess-who/round",
-      getGuessWhoStatus: "GET /api/guess-who/status/:roundId?",
-      setGuessWhoSecret: "POST /api/guess-who/secret",
-      submitGuessWhoFinalGuess: "POST /api/guess-who/guess",
+      startWordQuestRound: "POST /api/word-quest/round",
+      getWordQuestStatus: "GET /api/word-quest/status/:roundId?",
+      submitWordQuestGuess: "POST /api/word-quest/guess",
+      startHiddenFleetRound: "POST /api/hidden-fleet/round",
+      getHiddenFleetStatus: "GET /api/hidden-fleet/status/:roundId?",
+      placeHiddenFleet: "POST /api/hidden-fleet/fleet",
+      submitHiddenFleetAttack: "POST /api/hidden-fleet/attack",
+      startWhoIsItRound: "POST /api/who-is-it/round",
+      getWhoIsItStatus: "GET /api/who-is-it/status/:roundId?",
+      setWhoIsItSecret: "POST /api/who-is-it/secret",
+      submitWhoIsItFinalGuess: "POST /api/who-is-it/guess",
     },
   });
 });
@@ -229,7 +229,7 @@ app.post("/api/tic-tac-toe/move", (req, res) => {
   }
 });
 
-app.post("/api/wordly/round", (req, res) => {
+app.post(["/api/word-quest/round", "/api/wordly/round"], (req, res) => {
   try {
     const body = req.body as {
       turn?: WordlyTurn;
@@ -249,13 +249,13 @@ app.post("/api/wordly/round", (req, res) => {
   }
 });
 
-app.get("/api/wordly/status", (_req, res) => {
+app.get(["/api/word-quest/status", "/api/wordly/status"], (_req, res) => {
   try {
     const status = getWordlyStatus();
     res.json({ ok: true, status });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    if (message === "No wordly round has been started yet.") {
+    if (message === "No word quest round has been started yet.") {
       res.json({ ok: true, status: null, needsRound: true });
       return;
     }
@@ -264,16 +264,16 @@ app.get("/api/wordly/status", (_req, res) => {
   }
 });
 
-app.get("/api/wordly/status/:roundId", (req, res) => {
+app.get(["/api/word-quest/status/:roundId", "/api/wordly/status/:roundId"], (req, res) => {
   try {
-    const status = getWordlyStatus(req.params["roundId"]);
+    const status = getWordlyStatus(String(req.params["roundId"]));
     res.json({ ok: true, status });
   } catch (error) {
     sendApiError(res, error);
   }
 });
 
-app.post("/api/wordly/guess", (req, res) => {
+app.post(["/api/word-quest/guess", "/api/wordly/guess"], (req, res) => {
   try {
     const body = req.body as { roundId?: string; guess?: string };
     const result = submitWordlyGuess({
@@ -286,7 +286,7 @@ app.post("/api/wordly/guess", (req, res) => {
   }
 });
 
-app.post("/api/battleship/round", (_req, res) => {
+app.post(["/api/hidden-fleet/round", "/api/battleship/round"], (_req, res) => {
   try {
     res.json({ ok: true, status: startBattleshipRound() });
   } catch (error) {
@@ -294,12 +294,12 @@ app.post("/api/battleship/round", (_req, res) => {
   }
 });
 
-app.get("/api/battleship/status", (_req, res) => {
+app.get(["/api/hidden-fleet/status", "/api/battleship/status"], (_req, res) => {
   try {
     res.json({ ok: true, status: getBattleshipStatus() });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    if (message === "No battleship round has been started yet.") {
+    if (message === "No hidden fleet round has been started yet.") {
       res.json({ ok: true, status: null, needsRound: true });
       return;
     }
@@ -307,15 +307,15 @@ app.get("/api/battleship/status", (_req, res) => {
   }
 });
 
-app.get("/api/battleship/status/:roundId", (req, res) => {
+app.get(["/api/hidden-fleet/status/:roundId", "/api/battleship/status/:roundId"], (req, res) => {
   try {
-    res.json({ ok: true, status: getBattleshipStatus({ roundId: req.params["roundId"] }) });
+    res.json({ ok: true, status: getBattleshipStatus({ roundId: String(req.params["roundId"]) }) });
   } catch (error) {
     sendApiError(res, error);
   }
 });
 
-app.post("/api/battleship/fleet", (req, res) => {
+app.post(["/api/hidden-fleet/fleet", "/api/battleship/fleet"], (req, res) => {
   try {
     const body = req.body as {
       roundId?: string;
@@ -333,7 +333,7 @@ app.post("/api/battleship/fleet", (req, res) => {
   }
 });
 
-app.post("/api/battleship/attack", (req, res) => {
+app.post(["/api/hidden-fleet/attack", "/api/battleship/attack"], (req, res) => {
   try {
     const body = req.body as { roundId?: string; attacker?: BattleshipOwner; cell?: string };
     const result = submitBattleshipAttack({
@@ -347,7 +347,7 @@ app.post("/api/battleship/attack", (req, res) => {
   }
 });
 
-app.post("/api/guess-who/round", (req, res) => {
+app.post(["/api/who-is-it/round", "/api/guess-who/round"], (req, res) => {
   try {
     const body = req.body as { turn?: GuessWhoTurn; secretName?: string };
     const status = startGuessWhoRound({
@@ -360,12 +360,12 @@ app.post("/api/guess-who/round", (req, res) => {
   }
 });
 
-app.get("/api/guess-who/status", (_req, res) => {
+app.get(["/api/who-is-it/status", "/api/guess-who/status"], (_req, res) => {
   try {
     res.json({ ok: true, status: getGuessWhoStatus() });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    if (message === "No guess who round has been started yet.") {
+    if (message === "No who is it round has been started yet.") {
       res.json({ ok: true, status: null, needsRound: true });
       return;
     }
@@ -373,15 +373,15 @@ app.get("/api/guess-who/status", (_req, res) => {
   }
 });
 
-app.get("/api/guess-who/status/:roundId", (req, res) => {
+app.get(["/api/who-is-it/status/:roundId", "/api/guess-who/status/:roundId"], (req, res) => {
   try {
-    res.json({ ok: true, status: getGuessWhoStatus(req.params["roundId"]) });
+    res.json({ ok: true, status: getGuessWhoStatus(String(req.params["roundId"])) });
   } catch (error) {
     sendApiError(res, error);
   }
 });
 
-app.post("/api/guess-who/secret", (req, res) => {
+app.post(["/api/who-is-it/secret", "/api/guess-who/secret"], (req, res) => {
   try {
     const body = req.body as { roundId?: string; secretName?: string };
     const status = setGuessWhoSecret({
@@ -394,7 +394,7 @@ app.post("/api/guess-who/secret", (req, res) => {
   }
 });
 
-app.post("/api/guess-who/guess", (req, res) => {
+app.post(["/api/who-is-it/guess", "/api/guess-who/guess"], (req, res) => {
   try {
     const body = req.body as { roundId?: string; guess?: string };
     const result = submitGuessWhoFinalGuess({
