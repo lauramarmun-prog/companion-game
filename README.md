@@ -38,7 +38,7 @@ The first pilot game is Hangman. Word Quest, Quiz, Tic-Tac-Toe, Hidden Fleet, an
 ## Hidden Fleet tools
 
 - `hidden_fleet_how_to_play`: returns board coordinates, fleet sizes, and AI strategy notes.
-- `start_hidden_fleet_round`: starts an 8 by 8 round.
+- `start_hidden_fleet_round`: starts a 6 by 6 round.
 - `get_hidden_fleet_status`: returns public status plus AI ship positions for the AI only.
 - `place_hidden_fleet_ai_fleet`: lets the AI place ships with lengths 4, 3, 3, and 2.
 - `submit_hidden_fleet_attack`: attacks a coordinate like A2 and returns `agua` or `tocado`.

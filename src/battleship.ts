@@ -22,8 +22,8 @@ export type BattleshipRound = {
   updatedAt: string;
 };
 
-const rows = ["A", "B", "C", "D", "E", "F", "G", "H"] as const;
-const cols = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+const rows = ["A", "B", "C", "D", "E", "F"] as const;
+const cols = [1, 2, 3, 4, 5, 6] as const;
 const fleet = [
   { id: "flagship", name: "Flagship", length: 4 },
   { id: "cruiser", name: "Cruiser", length: 3 },
@@ -51,7 +51,7 @@ function parseCell(cell: string): { row: number; col: number; id: BattleshipCell
   const row = rows.indexOf(normalized[0] as (typeof rows)[number]);
   const colNumber = Number(normalized.slice(1));
   const col = cols.indexOf(colNumber as (typeof cols)[number]);
-  if (row === -1 || col === -1) throw new Error(`Invalid coordinate: ${cell}. Use A1 to H8.`);
+  if (row === -1 || col === -1) throw new Error(`Invalid coordinate: ${cell}. Use A1 to F6.`);
   return { row, col, id: normalized as BattleshipCell };
 }
 

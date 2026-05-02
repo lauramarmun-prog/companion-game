@@ -277,7 +277,7 @@ submit_word_quest_guess(guess="cloud")
 
 const battleshipHowToPlay = `# Hidden Fleet MCP - Game Guide for AIs
 
-Hidden Fleet is played on an 8 by 8 board. Columns are 1 to 8. Rows are A to H. Coordinates look like A1, A2, B4, H8.
+Hidden Fleet is played on a 6 by 6 board. Columns are 1 to 6. Rows are A to F. Coordinates look like A1, A2, B4, or F6.
 
 Fleet:
 - 1 flagship with 4 cells.
@@ -674,7 +674,7 @@ Use turn="ai" when the AI will guess a word chosen privately by the human/fronte
 
   server.tool(
     "start_hidden_fleet_round",
-    "Start a new Hidden Fleet round on an 8 by 8 board.",
+    "Start a new Hidden Fleet round on a 6 by 6 board.",
     {},
     async () => asToolText(startBattleshipRound()),
   );
@@ -698,7 +698,7 @@ Use turn="ai" when the AI will guess a word chosen privately by the human/fronte
 
   server.tool(
     "place_hidden_fleet_ai_fleet",
-    "Place the AI fleet. Use ship lengths 4, 3, 3, and 2. Coordinates are A1 to H8.",
+    "Place the AI fleet. Use ship lengths 4, 3, 3, and 2. Coordinates are A1 to F6.",
     {
       roundId: z.string().optional().describe("Defaults to the active Hidden Fleet round."),
       ships: z.array(shipPlacementSchema).length(4),
@@ -711,7 +711,7 @@ Use turn="ai" when the AI will guess a word chosen privately by the human/fronte
     "Attack the human sea with a coordinate like A2. Returns water or hit, without revealing human ships.",
     {
       roundId: z.string().optional().describe("Defaults to the active Hidden Fleet round."),
-      cell: z.string().describe("Coordinate from A1 to H8."),
+      cell: z.string().describe("Coordinate from A1 to F6."),
     },
     async ({ roundId, cell }) => asToolText(submitBattleshipAttack({ roundId, attacker: "ai", cell })),
   );
