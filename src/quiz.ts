@@ -88,6 +88,16 @@ function getPublicStatus(round: QuizRound) {
   };
 }
 
+function firstUnansweredQuestionIndex(round: QuizRound, startIndex = 0) {
+  const afterStart = round.questions.findIndex((question, index) => index >= startIndex && question.answer === null);
+  if (afterStart !== -1) return afterStart;
+
+  const anyUnanswered = round.questions.findIndex((question) => question.answer === null);
+  if (anyUnanswered !== -1) return anyUnanswered;
+
+  return Math.max(round.questions.length - 1, 0);
+}
+
 export function startQuizRound(input?: {
   mode?: QuizMode;
   topic?: string | null;
@@ -147,6 +157,7 @@ export function addQuizQuestion(input: {
   };
 
   round.questions.push(quizQuestion);
+  round.currentQuestionIndex = firstUnansweredQuestionIndex(round, round.currentQuestionIndex);
   round.updatedAt = now();
 
   return {
@@ -197,9 +208,7 @@ export function submitQuizAnswer(input: {
   question.correct = correct;
 
   const answeredIndex = round.questions.indexOf(question);
-  if (answeredIndex >= round.currentQuestionIndex) {
-    round.currentQuestionIndex = Math.min(answeredIndex + 1, Math.max(round.questions.length - 1, 0));
-  }
+  round.currentQuestionIndex = firstUnansweredQuestionIndex(round, answeredIndex + 1);
 
   if (round.totalQuestions && round.questions.length >= round.totalQuestions && round.questions.every((item) => item.answer !== null)) {
     round.status = "finished";
