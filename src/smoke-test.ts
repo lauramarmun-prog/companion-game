@@ -1,4 +1,4 @@
-import { placeBattleshipFleet, startBattleshipRound, submitBattleshipAttack } from "./battleship.js";
+import { getBattleshipStatus, placeBattleshipFleet, startBattleshipRound, submitBattleshipAttack } from "./battleship.js";
 import { getGuessWhoStatus, setGuessWhoSecret, startGuessWhoRound, submitGuessWhoFinalGuess } from "./guessWho.js";
 import { getHangmanStatus, startHangmanRound, submitHangmanLetter, submitHangmanWord } from "./hangman.js";
 import { addQuizQuestion, finishQuizRound, startQuizRound, submitQuizAnswer } from "./quiz.js";
@@ -58,6 +58,7 @@ console.log(
   }),
 );
 console.log("HIDDEN FLEET ATTACK", submitBattleshipAttack({ roundId: battle.roundId, attacker: "human", cell: "A1" }));
+console.log("HIDDEN FLEET AI VIEW", getBattleshipStatus({ roundId: battle.roundId, includeAiShips: true }).aiView?.nextAction);
 
 const guessWhoHuman = startGuessWhoRound({ turn: "human" });
 console.log("WHO IS IT HUMAN START", guessWhoHuman.characterCount, guessWhoHuman.hasSecretCharacter);

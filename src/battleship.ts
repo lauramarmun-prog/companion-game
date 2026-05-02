@@ -120,14 +120,83 @@ function publicShip(ship: ShipSpec, shotsAgainst: BattleshipCell[], reveal = fal
   };
 }
 
+function shotResults(shots: BattleshipCell[], defenderShips: ShipSpec[]) {
+  const shipCells = [...occupiedShips(defenderShips)];
+  return shots.map((cell) => ({
+    cell,
+    result: shipCells.includes(cell) ? "hit" : "miss",
+  }));
+}
+
+function makeTargetGrid(shots: BattleshipCell[], defenderShips: ShipSpec[]) {
+  const shotMap = new Map(shotResults(shots, defenderShips).map((shot) => [shot.cell, shot.result]));
+  return rows.map((row) => ({
+    row,
+    cells: cols.map((col) => {
+      const cell = `${row}${col}`;
+      return {
+        cell,
+        status: shotMap.get(cell) ?? "unknown",
+      };
+    }),
+  }));
+}
+
+function makeOwnSeaGrid(ships: ShipSpec[], incomingShots: BattleshipCell[]) {
+  const shipCells = occupiedShips(ships);
+  const shotMap = new Map(shotResults(incomingShots, ships).map((shot) => [shot.cell, shot.result]));
+  return rows.map((row) => ({
+    row,
+    cells: cols.map((col) => {
+      const cell = `${row}${col}`;
+      const shot = shotMap.get(cell);
+      return {
+        cell,
+        status: shot === "hit" ? "hit_on_your_ship" : shot === "miss" ? "miss_on_your_sea" : shipCells.has(cell) ? "your_ship" : "empty",
+      };
+    }),
+  }));
+}
+
 function getPublicStatus(round: BattleshipRound, options?: { includeAiShips?: boolean; includeHumanShips?: boolean }) {
-  const humanShipCells = [...occupiedShips(round.humanShips)];
-  const aiShipCells = [...occupiedShips(round.aiShips)];
   const includeHumanShips = options?.includeHumanShips ?? true;
+  const humanShots = shotResults(round.humanShots, round.aiShips);
+  const aiShots = shotResults(round.aiShots, round.humanShips);
+  const availableAiTargets = allCells().filter((cell) => !round.aiShots.includes(cell));
+  const aiView = options?.includeAiShips
+    ? {
+        role: "ai",
+        boardSize: "6x6",
+        coordinateRange: "A1 to F6",
+        importantRule:
+          "There are two separate seas with the same coordinate labels. A human shot at C3 on your sea does not mean C3 is unavailable on the human sea. For your attacks, only use availableTargets.",
+        yourSea: {
+          description: "Your AI sea. These are your ships and the human's shots against you.",
+          ships: round.aiShips.map((ship) => publicShip(ship, round.humanShots, true)),
+          incomingShotsFromHuman: humanShots,
+          grid: makeOwnSeaGrid(round.aiShips, round.humanShots),
+        },
+        targetSea: {
+          description: "The human sea. This is the only sea you attack with submit_hidden_fleet_attack.",
+          yourShotsAtHumanSea: aiShots,
+          availableTargets: availableAiTargets,
+          grid: makeTargetGrid(round.aiShots, round.humanShips),
+        },
+        nextAction:
+          round.status !== "playing"
+            ? `Round is ${round.status}.`
+            : round.currentTurn === "ai"
+              ? "Choose exactly one coordinate from targetSea.availableTargets and call submit_hidden_fleet_attack."
+              : "Wait for the human to attack your sea.",
+      }
+    : undefined;
+
   return {
     roundId: round.id,
     rows,
     cols,
+    boardSize: "6x6",
+    coordinateRange: "A1 to F6",
     fleet,
     status: round.status,
     winner: round.winner,
@@ -136,14 +205,11 @@ function getPublicStatus(round: BattleshipRound, options?: { includeAiShips?: bo
     aiReady: round.aiShips.length === fleet.length,
     humanShips: round.humanShips.map((ship) => publicShip(ship, round.aiShots, includeHumanShips)),
     aiShips: round.aiShips.map((ship) => publicShip(ship, round.humanShots, Boolean(options?.includeAiShips))),
-    humanShots: round.humanShots.map((cell) => ({
-      cell,
-      result: aiShipCells.includes(cell) ? "hit" : "miss",
-    })),
-    aiShots: round.aiShots.map((cell) => ({
-      cell,
-      result: humanShipCells.includes(cell) ? "hit" : "miss",
-    })),
+    humanShots,
+    aiShots,
+    shotsByHumanAtAiSea: humanShots,
+    shotsByAiAtHumanSea: aiShots,
+    aiView,
   };
 }
 

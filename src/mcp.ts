@@ -297,11 +297,31 @@ Tools:
 - place_hidden_fleet_ai_fleet: places your fleet. Use starts like A1 with orientation horizontal or vertical.
 - submit_hidden_fleet_attack: attack the human sea with a coordinate. The API returns hit or miss, and sunk when a ship is completed.
 
+## Do not mix up the two seas
+
+There are always two separate boards:
+
+1. Your AI sea:
+- This contains your AI ships.
+- The human attacks this sea.
+- In status, read this as aiView.yourSea.
+- Human shots against you are aiView.yourSea.incomingShotsFromHuman.
+
+2. The human sea:
+- This contains the human ships.
+- You attack this sea.
+- In status, read this as aiView.targetSea.
+- Your previous attacks are aiView.targetSea.yourShotsAtHumanSea.
+- Your safe legal targets are aiView.targetSea.availableTargets.
+
+Important: both seas use the same coordinates, A1 to F6. If the human shot C3 on your sea, C3 may still be a valid target on the human sea. For your next attack, ignore humanShots and choose only from aiView.targetSea.availableTargets.
+
 Strategy:
 1. Attack checkerboard-style first.
 2. When you hit, attack adjacent cells.
 3. Track misses so you do not repeat a coordinate.
-4. Remember the fleet lengths: 4, 3, 3, and 2.`;
+4. Prefer coordinates from aiView.targetSea.availableTargets.
+5. Remember the fleet lengths: 4, 3, 3, and 2.`;
 
 const guessWhoHowToPlay = `# Who is it? MCP - Game Guide for AIs
 
@@ -681,7 +701,7 @@ Use turn="ai" when the AI will guess a word chosen privately by the human/fronte
 
   server.tool(
     "get_hidden_fleet_status",
-    "Get Hidden Fleet status. This includes AI ship positions, but never human ship positions.",
+    "Get Hidden Fleet status. Use aiView.targetSea.availableTargets for AI attacks; do not confuse human shots on your sea with your shots on the human sea.",
     {
       roundId: z.string().optional().describe("Defaults to the active Hidden Fleet round."),
     },
@@ -708,7 +728,7 @@ Use turn="ai" when the AI will guess a word chosen privately by the human/fronte
 
   server.tool(
     "submit_hidden_fleet_attack",
-    "Attack the human sea with a coordinate like A2. Returns water or hit, without revealing human ships.",
+    "Attack the human sea with a coordinate like A2. Pick from aiView.targetSea.availableTargets. Returns water or hit, without revealing human ships.",
     {
       roundId: z.string().optional().describe("Defaults to the active Hidden Fleet round."),
       cell: z.string().describe("Coordinate from A1 to F6."),
