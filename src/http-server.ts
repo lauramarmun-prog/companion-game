@@ -26,6 +26,15 @@ import {
   type HangmanTurn,
 } from "./hangman.js";
 import { createCompanionMcpServer } from "./mcp.js";
+import {
+  addQuizQuestion,
+  finishQuizRound,
+  getQuizStatus,
+  startQuizRound,
+  submitQuizAnswer,
+  type QuizAuthor,
+  type QuizMode,
+} from "./quiz.js";
 import { getTicTacToeStatus, startTicTacToeRound, submitTicTacToeMove } from "./ticTacToe.js";
 import { getWordlyStatus, startWordlyRound, submitWordlyGuess, type WordlyTurn } from "./wordly.js";
 
@@ -77,6 +86,7 @@ app.get("/", (_req, res) => {
       "hangman-letter-guess",
       "hangman-word-guess",
       "tic-tac-toe",
+      "quiz",
       "word-quest",
       "hidden-fleet",
       "who-is-it",
@@ -92,6 +102,11 @@ app.get("/", (_req, res) => {
       startTicTacToeRound: "POST /api/tic-tac-toe/round",
       getTicTacToeStatus: "GET /api/tic-tac-toe/status/:roundId?",
       submitTicTacToeMove: "POST /api/tic-tac-toe/move",
+      startQuizRound: "POST /api/quiz/round",
+      getQuizStatus: "GET /api/quiz/status/:roundId?",
+      addQuizQuestion: "POST /api/quiz/question",
+      submitQuizAnswer: "POST /api/quiz/answer",
+      finishQuizRound: "POST /api/quiz/finish",
       startWordQuestRound: "POST /api/word-quest/round",
       getWordQuestStatus: "GET /api/word-quest/status/:roundId?",
       submitWordQuestGuess: "POST /api/word-quest/guess",
@@ -224,6 +239,96 @@ app.post("/api/tic-tac-toe/move", (req, res) => {
       player: body.player,
     });
     res.json({ ok: true, result });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post("/api/quiz/round", (req, res) => {
+  try {
+    const body = req.body as { mode?: QuizMode; topic?: string; totalQuestions?: number };
+    const status = startQuizRound({
+      mode: body.mode,
+      topic: body.topic,
+      totalQuestions: body.totalQuestions,
+    });
+    res.json({ ok: true, status });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.get("/api/quiz/status", (_req, res) => {
+  try {
+    res.json({ ok: true, status: getQuizStatus() });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    if (message === "No quiz round has been started yet.") {
+      res.json({ ok: true, status: null, needsRound: true });
+      return;
+    }
+    sendApiError(res, error);
+  }
+});
+
+app.get("/api/quiz/status/:roundId", (req, res) => {
+  try {
+    res.json({ ok: true, status: getQuizStatus(req.params["roundId"]) });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post("/api/quiz/question", (req, res) => {
+  try {
+    const body = req.body as {
+      roundId?: string;
+      author?: QuizAuthor;
+      question?: string;
+      choices?: string[];
+      correctAnswer?: string;
+      explanation?: string;
+    };
+    const result = addQuizQuestion({
+      roundId: body.roundId,
+      author: body.author,
+      question: body.question ?? "",
+      choices: body.choices,
+      correctAnswer: body.correctAnswer,
+      explanation: body.explanation,
+    });
+    res.json({ ok: true, result });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post("/api/quiz/answer", (req, res) => {
+  try {
+    const body = req.body as {
+      roundId?: string;
+      questionId?: string;
+      questionIndex?: number;
+      answer?: string;
+      correct?: boolean;
+    };
+    const result = submitQuizAnswer({
+      roundId: body.roundId,
+      questionId: body.questionId,
+      questionIndex: body.questionIndex,
+      answer: body.answer ?? "",
+      correct: body.correct,
+    });
+    res.json({ ok: true, result });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post("/api/quiz/finish", (req, res) => {
+  try {
+    const body = req.body as { roundId?: string };
+    res.json({ ok: true, status: finishQuizRound({ roundId: body.roundId }) });
   } catch (error) {
     sendApiError(res, error);
   }

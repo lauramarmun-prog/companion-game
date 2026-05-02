@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getBattleshipStatus, placeBattleshipFleet, startBattleshipRound, submitBattleshipAttack } from "./battleship.js";
 import { getGuessWhoStatus, setGuessWhoSecret, startGuessWhoRound, submitGuessWhoFinalGuess } from "./guessWho.js";
 import { getHangmanStatus, startHangmanRound, submitHangmanLetter, submitHangmanWord } from "./hangman.js";
+import { addQuizQuestion, finishQuizRound, getQuizStatus, startQuizRound, submitQuizAnswer } from "./quiz.js";
 import { getTicTacToeStatus, startTicTacToeRound, submitTicTacToeMove } from "./ticTacToe.js";
 import { getWordlyStatus, startWordlyRound, submitWordlyGuess } from "./wordly.js";
 
@@ -362,6 +363,45 @@ Then narrow down with specific details:
 
 Keep your secret if the human is guessing. If you are guessing, only submit a final guess when the answers make one character likely.`;
 
+const quizHowToPlay = `# Quiz MCP - Game Guide for AIs
+
+Quiz has two soft modes:
+
+## ask-each-other
+
+Use this when the human and AI take turns asking each other questions in chat.
+
+Flow:
+1. Call start_quiz_round with mode="ask-each-other".
+2. Use add_quiz_question when you want to save a question in the round.
+3. The human and AI can answer naturally in chat.
+4. Use submit_quiz_answer if you want the API to remember an answer.
+5. Use finish_quiz_round when the cozy exchange is done.
+
+This mode does not need strict scoring. It is for playful, thoughtful, funny, or reflective questions.
+
+## ai-quiz
+
+Use this when you prepare a small quiz for the human.
+
+Flow:
+1. Call start_quiz_round with mode="ai-quiz", optional topic, and optional totalQuestions.
+2. Add questions with add_quiz_question.
+3. Include choices when it is multiple choice.
+4. Include correctAnswer when the question has a clear answer.
+5. When the human answers, call submit_quiz_answer.
+6. The API returns whether the answer is correct when correctAnswer exists.
+
+## Tools
+
+- start_quiz_round: starts a new quiz.
+- get_quiz_status: reads questions, answers, score, and current question.
+- add_quiz_question: adds one question.
+- submit_quiz_answer: stores an answer and scores it when possible.
+- finish_quiz_round: marks the quiz as finished.
+
+Keep the tone gentle. Quiz is meant to feel warm, playful, and companion-like, not like an exam.`;
+
 export function createCompanionMcpServer() {
   const server = new McpServer({
     name: "mcp-companion-game",
@@ -518,6 +558,69 @@ Use turn="ai" when the AI will guess a word chosen by the human/frontend. For pr
       player: z.enum(["X", "O"]).optional().describe("Defaults to the current player."),
     },
     async (input) => asToolText(submitTicTacToeMove(input)),
+  );
+
+  server.tool(
+    "quiz_how_to_play",
+    "Read the Quiz MCP rules, modes, tools, and gentle hosting notes for AIs.",
+    {},
+    async () => asToolText({ guide: quizHowToPlay }),
+  );
+
+  server.tool(
+    "start_quiz_round",
+    "Start a Quiz round. Use ask-each-other for shared questions or ai-quiz when the AI prepares questions for the human.",
+    {
+      mode: z.enum(["ask-each-other", "ai-quiz"]).optional().describe("Defaults to ask-each-other."),
+      topic: z.string().optional().describe("Optional quiz topic, mood, or theme."),
+      totalQuestions: z.number().int().min(1).max(30).optional().describe("Optional planned question count."),
+    },
+    async (input) => asToolText(startQuizRound(input)),
+  );
+
+  server.tool(
+    "get_quiz_status",
+    "Get the public state of the active Quiz round.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active Quiz round."),
+    },
+    async ({ roundId }) => asToolText(getQuizStatus(roundId)),
+  );
+
+  server.tool(
+    "add_quiz_question",
+    "Add one Quiz question. Include choices and correctAnswer for AI quiz mode when useful.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active Quiz round."),
+      author: z.enum(["human", "ai"]).optional().describe("Who created the question. Defaults to ai."),
+      question: z.string().min(1),
+      choices: z.array(z.string()).optional(),
+      correctAnswer: z.string().optional().describe("Optional answer used for scoring."),
+      explanation: z.string().optional().describe("Optional explanation revealed after answering or finishing."),
+    },
+    async (input) => asToolText(addQuizQuestion(input)),
+  );
+
+  server.tool(
+    "submit_quiz_answer",
+    "Submit an answer for the current Quiz question, or for a specific question.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active Quiz round."),
+      questionId: z.string().optional(),
+      questionIndex: z.number().int().min(0).optional(),
+      answer: z.string().min(1),
+      correct: z.boolean().optional().describe("Optional manual scoring for open-ended questions."),
+    },
+    async (input) => asToolText(submitQuizAnswer(input)),
+  );
+
+  server.tool(
+    "finish_quiz_round",
+    "Finish the active Quiz round and reveal stored explanations.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active Quiz round."),
+    },
+    async (input) => asToolText(finishQuizRound(input)),
   );
 
   server.tool(

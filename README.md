@@ -2,7 +2,7 @@
 
 Small MCP server for Companion Games.
 
-The first pilot game is Hangman. Word Quest, Tic-Tac-Toe, Hidden Fleet, and Who is it? are also available. The important rule is that public status does not return private secret words or secret characters while a round is still playing.
+The first pilot game is Hangman. Word Quest, Quiz, Tic-Tac-Toe, Hidden Fleet, and Who is it? are also available. The important rule is that public status does not return private secret words or secret characters while a round is still playing.
 
 ## Hangman tools
 
@@ -18,6 +18,15 @@ The first pilot game is Hangman. Word Quest, Tic-Tac-Toe, Hidden Fleet, and Who 
 - `start_tic_tac_toe_round`: starts a round.
 - `get_tic_tac_toe_status`: returns the public state of the current round.
 - `submit_tic_tac_toe_move`: submits one move by board index.
+
+## Quiz tools
+
+- `quiz_how_to_play`: returns the two quiz modes, tools, and gentle hosting notes.
+- `start_quiz_round`: starts either `ask-each-other` or `ai-quiz` mode.
+- `get_quiz_status`: returns questions, answers, score, and current question.
+- `add_quiz_question`: adds one question with optional choices and answer.
+- `submit_quiz_answer`: stores and optionally scores an answer.
+- `finish_quiz_round`: marks the quiz as finished.
 
 ## Word Quest tools
 
@@ -62,6 +71,11 @@ Useful API calls:
 - `POST /api/tic-tac-toe/round`
 - `GET /api/tic-tac-toe/status`
 - `POST /api/tic-tac-toe/move`
+- `POST /api/quiz/round`
+- `GET /api/quiz/status`
+- `POST /api/quiz/question`
+- `POST /api/quiz/answer`
+- `POST /api/quiz/finish`
 - `POST /api/word-quest/round`
 - `GET /api/word-quest/status`
 - `POST /api/word-quest/guess`
