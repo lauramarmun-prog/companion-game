@@ -6,6 +6,14 @@ import {
   startBattleshipRound,
   submitBattleshipAttack,
 } from "./battleship.js";
+import {
+  getShortBattleshipAttackView,
+  getShortBattleshipMySea,
+  getShortBattleshipStatus,
+  placeShortBattleshipFleet,
+  startShortBattleshipRound,
+  submitShortBattleshipAttack,
+} from "./battleshipShort.js";
 import { getGuessWhoStatus, setGuessWhoSecret, startGuessWhoRound, submitGuessWhoFinalGuess } from "./guessWho.js";
 import { getHangmanStatus, startHangmanRound, submitHangmanLetter, submitHangmanWord } from "./hangman.js";
 import { addQuizQuestion, finishQuizRound, startQuizRound, submitQuizAnswer } from "./quiz.js";
@@ -68,6 +76,25 @@ console.log("HIDDEN FLEET ATTACK", submitBattleshipAttack({ roundId: battle.roun
 console.log("HIDDEN FLEET AI VIEW", getBattleshipStatus({ roundId: battle.roundId, includeAiShips: true }).aiView?.nextAction);
 console.log("HIDDEN FLEET ATTACK VIEW", getBattleshipAttackView({ roundId: battle.roundId }).aiTacticalView.nextBestMove);
 console.log("HIDDEN FLEET MY SEA", getBattleshipMySea({ roundId: battle.roundId }).yourSea.incomingShotsFromHuman.length);
+
+const shortBattle = startShortBattleshipRound();
+console.log("HIDDEN FLEET SHORT START", shortBattle);
+console.log(
+  "HIDDEN FLEET SHORT FLEET",
+  placeShortBattleshipFleet({
+    roundId: shortBattle.roundId,
+    owner: "human",
+    ships: [
+      { length: 3, start: "A1", orientation: "horizontal" },
+      { length: 2, start: "B1", orientation: "horizontal" },
+      { length: 2, start: "C1", orientation: "horizontal" },
+    ],
+  }),
+);
+console.log("HIDDEN FLEET SHORT ATTACK", submitShortBattleshipAttack({ roundId: shortBattle.roundId, attacker: "human", cell: "A1" }));
+console.log("HIDDEN FLEET SHORT AI VIEW", getShortBattleshipStatus({ roundId: shortBattle.roundId, includeAiShips: true }).aiView?.nextAction);
+console.log("HIDDEN FLEET SHORT ATTACK VIEW", getShortBattleshipAttackView({ roundId: shortBattle.roundId }).aiTacticalView.nextBestMove);
+console.log("HIDDEN FLEET SHORT MY SEA", getShortBattleshipMySea({ roundId: shortBattle.roundId }).yourSea.incomingShotsFromHuman.length);
 
 const guessWhoHuman = startGuessWhoRound({ turn: "human" });
 console.log("WHO IS IT HUMAN START", guessWhoHuman.characterCount, guessWhoHuman.hasSecretCharacter);

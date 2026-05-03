@@ -8,6 +8,14 @@ import {
   startBattleshipRound,
   submitBattleshipAttack,
 } from "./battleship.js";
+import {
+  getShortBattleshipAttackView,
+  getShortBattleshipMySea,
+  getShortBattleshipStatus,
+  placeShortBattleshipAiFleet,
+  startShortBattleshipRound,
+  submitShortBattleshipAttack,
+} from "./battleshipShort.js";
 import { getGuessWhoStatus, setGuessWhoSecret, startGuessWhoRound, submitGuessWhoFinalGuess } from "./guessWho.js";
 import { getHangmanStatus, startHangmanRound, submitHangmanLetter, submitHangmanWord } from "./hangman.js";
 import { addQuizQuestion, finishQuizRound, getQuizStatus, startQuizRound, submitQuizAnswer } from "./quiz.js";
@@ -359,6 +367,41 @@ Strategy:
 3. If there are no recommendations, choose from aiTacticalView.availableTargets.
 4. Never choose from aiTacticalView.doNotShoot.
 5. Remember the fleet lengths: 4, 3, 3, and 2.`;
+
+const shortBattleshipHowToPlay = `# Hidden Fleet Short MCP - Game Guide for AIs
+
+Hidden Fleet Short is the same game on a smaller 4 by 4 board. Columns are 1 to 4. Rows are A to D. Coordinates look like A1, A2, B4, or D4.
+
+Fleet:
+- 1 scout with 3 cells.
+- 2 skiffs with 2 cells each.
+
+Ships can be horizontal or vertical and cannot overlap.
+
+The human places ships privately in the frontend. You know the human fleet is ready, but you never receive the human ship positions.
+
+Your AI fleet can be placed with place_hidden_fleet_short_ai_fleet. If you do not place it, the backend starts with a random AI fleet.
+
+Your AI ship positions are private and are intentionally not returned to you during play. Never tell the human where your ships are, never draw your own sea for the human, and never summarize your fleet coordinates during a live round. If you place your fleet, say only that your fleet is ready.
+
+Tools:
+- start_hidden_fleet_short_round: starts a new short round.
+- get_hidden_fleet_short_status: returns board, shots, ready flags, sunk ships, and AI-safe views. It does not reveal your ship coordinates.
+- get_hidden_fleet_short_attack_view: returns only the tactical view for attacking the human sea.
+- get_hidden_fleet_short_my_sea: returns only your AI sea and the human's incoming shots against you.
+- place_hidden_fleet_short_ai_fleet: places your fleet. Use starts like A1 with orientation horizontal or vertical.
+- submit_hidden_fleet_short_attack: attack the human sea with a coordinate. The API returns hit or miss, and sunk when a ship is completed.
+
+Use get_hidden_fleet_short_attack_view on your attack turn. It returns aiTacticalView.nextBestMove, recommendedNextShots, availableTargets, doNotShoot, hits, misses, hitClusters, and a targetSeaMap.
+
+Important: both seas use the same coordinates, A1 to D4. If the human shot C3 on your sea, C3 may still be a valid target on the human sea. For your next attack, ignore humanShots and choose only from aiTacticalView.availableTargets.
+
+Strategy:
+1. Prefer aiTacticalView.nextBestMove.
+2. If nextBestMove is null, choose from aiTacticalView.recommendedNextShots.
+3. If there are no recommendations, choose from aiTacticalView.availableTargets.
+4. Never choose from aiTacticalView.doNotShoot.
+5. Remember the fleet lengths: 3, 2, and 2.`;
 
 const guessWhoHowToPlay = `# Who is it? MCP - Game Guide for AIs
 
@@ -789,6 +832,75 @@ Use turn="ai" when the AI will guess a word chosen privately by the human/fronte
       cell: z.string().describe("Coordinate from A1 to F6."),
     },
     async ({ roundId, cell }) => asToolText(submitBattleshipAttack({ roundId, attacker: "ai", cell })),
+  );
+
+  server.tool(
+    "hidden_fleet_short_how_to_play",
+    "Read the short Hidden Fleet MCP rules, 4 by 4 board coordinates, fleet sizes, and AI strategy.",
+    {},
+    async () => asToolText({ guide: shortBattleshipHowToPlay }),
+  );
+
+  server.tool(
+    "start_hidden_fleet_short_round",
+    "Start a new short Hidden Fleet round on a 4 by 4 board.",
+    {},
+    async () => asToolText(startShortBattleshipRound()),
+  );
+
+  server.tool(
+    "get_hidden_fleet_short_status",
+    "Get full short Hidden Fleet status. Prefer get_hidden_fleet_short_attack_view on your attack turn and get_hidden_fleet_short_my_sea for defense.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active short Hidden Fleet round."),
+    },
+    async ({ roundId }) => asToolText(getShortBattleshipStatus({ roundId, includeAiShips: true })),
+  );
+
+  server.tool(
+    "get_hidden_fleet_short_attack_view",
+    "Get only the AI tactical view for attacking the human sea in short mode. This does not include your AI ships, your sea, or the human's shots against you.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active short Hidden Fleet round."),
+    },
+    async ({ roundId }) => asToolText(getShortBattleshipAttackView({ roundId })),
+  );
+
+  server.tool(
+    "get_hidden_fleet_short_my_sea",
+    "Get only your short-mode AI defensive sea: sunk status and the human's incoming shots against you. Ship coordinates are hidden. Do not use it to choose attacks.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active short Hidden Fleet round."),
+    },
+    async ({ roundId }) => asToolText(getShortBattleshipMySea({ roundId })),
+  );
+
+  const shortShipPlacementSchema = z.object({
+    id: z.string().optional(),
+    start: z.string().optional().describe("Start coordinate like A1."),
+    length: z.number().int().min(2).max(3),
+    orientation: z.enum(["horizontal", "vertical"]),
+    cells: z.array(z.string()).optional().describe("Optional exact cells like ['A1','A2']."),
+  });
+
+  server.tool(
+    "place_hidden_fleet_short_ai_fleet",
+    "Place the short-mode AI fleet privately. Use ship lengths 3, 2, and 2. Coordinates are A1 to D4. Do not reveal, summarize, list, draw, or hint at these ship positions to the human.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active short Hidden Fleet round."),
+      ships: z.array(shortShipPlacementSchema).length(3),
+    },
+    async ({ roundId, ships }) => asToolText(placeShortBattleshipAiFleet({ roundId, ships })),
+  );
+
+  server.tool(
+    "submit_hidden_fleet_short_attack",
+    "Attack the human sea in short mode with a coordinate like A2. Pick from aiTacticalView.availableTargets. Returns water or hit, without revealing human ships.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active short Hidden Fleet round."),
+      cell: z.string().describe("Coordinate from A1 to D4."),
+    },
+    async ({ roundId, cell }) => asToolText(submitShortBattleshipAttack({ roundId, attacker: "ai", cell })),
   );
 
   return server;

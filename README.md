@@ -2,7 +2,7 @@
 
 Small MCP server for Companion Games.
 
-The first pilot game is Hangman. Word Quest, Quiz, Tic-Tac-Toe, Hidden Fleet, and Who is it? are also available. The important rule is that public status does not return private secret words or secret characters while a round is still playing.
+The first pilot game is Hangman. Word Quest, Quiz, Tic-Tac-Toe, Hidden Fleet, Hidden Fleet Short, and Who is it? are also available. The important rule is that public status does not return private secret words or secret characters while a round is still playing.
 
 ## Hangman tools
 
@@ -44,6 +44,16 @@ The first pilot game is Hangman. Word Quest, Quiz, Tic-Tac-Toe, Hidden Fleet, an
 - `get_hidden_fleet_my_sea`: returns only the AI sea and the human's incoming shots against it.
 - `place_hidden_fleet_ai_fleet`: lets the AI place ships with lengths 4, 3, 3, and 2.
 - `submit_hidden_fleet_attack`: attacks a coordinate like A2 and returns `agua` or `tocado`.
+
+## Hidden Fleet Short tools
+
+- `hidden_fleet_short_how_to_play`: returns short-mode board coordinates, fleet sizes, and AI strategy notes.
+- `start_hidden_fleet_short_round`: starts a 4 by 4 round.
+- `get_hidden_fleet_short_status`: returns public status plus AI-safe short-mode views.
+- `get_hidden_fleet_short_attack_view`: returns only the AI attack view for the human sea, with `nextBestMove`, `recommendedNextShots`, `availableTargets`, and `doNotShoot`.
+- `get_hidden_fleet_short_my_sea`: returns only the AI sea and the human's incoming shots against it.
+- `place_hidden_fleet_short_ai_fleet`: lets the AI place ships with lengths 3, 2, and 2.
+- `submit_hidden_fleet_short_attack`: attacks a coordinate from A1 to D4 and returns `agua` or `tocado`.
 
 ## Who is it? tools
 
@@ -87,6 +97,12 @@ Useful API calls:
 - `GET /api/hidden-fleet/my-sea`
 - `POST /api/hidden-fleet/fleet`
 - `POST /api/hidden-fleet/attack`
+- `POST /api/hidden-fleet-short/round`
+- `GET /api/hidden-fleet-short/status`
+- `GET /api/hidden-fleet-short/attack-view`
+- `GET /api/hidden-fleet-short/my-sea`
+- `POST /api/hidden-fleet-short/fleet`
+- `POST /api/hidden-fleet-short/attack`
 - `POST /api/who-is-it/round`
 - `GET /api/who-is-it/status`
 - `POST /api/who-is-it/secret`

@@ -14,6 +14,14 @@ import {
   type BattleshipOwner,
 } from "./battleship.js";
 import {
+  getShortBattleshipAttackView,
+  getShortBattleshipMySea,
+  getShortBattleshipStatus,
+  placeShortBattleshipFleet,
+  startShortBattleshipRound,
+  submitShortBattleshipAttack,
+} from "./battleshipShort.js";
+import {
   getGuessWhoStatus,
   setGuessWhoSecret,
   startGuessWhoRound,
@@ -91,6 +99,7 @@ app.get("/", (_req, res) => {
       "quiz",
       "word-quest",
       "hidden-fleet",
+      "hidden-fleet-short",
       "who-is-it",
       "empty-status-ok",
     ],
@@ -118,6 +127,12 @@ app.get("/", (_req, res) => {
       getHiddenFleetMySea: "GET /api/hidden-fleet/my-sea/:roundId?",
       placeHiddenFleet: "POST /api/hidden-fleet/fleet",
       submitHiddenFleetAttack: "POST /api/hidden-fleet/attack",
+      startHiddenFleetShortRound: "POST /api/hidden-fleet-short/round",
+      getHiddenFleetShortStatus: "GET /api/hidden-fleet-short/status/:roundId?",
+      getHiddenFleetShortAttackView: "GET /api/hidden-fleet-short/attack-view/:roundId?",
+      getHiddenFleetShortMySea: "GET /api/hidden-fleet-short/my-sea/:roundId?",
+      placeHiddenFleetShort: "POST /api/hidden-fleet-short/fleet",
+      submitHiddenFleetShortAttack: "POST /api/hidden-fleet-short/attack",
       startWhoIsItRound: "POST /api/who-is-it/round",
       getWhoIsItStatus: "GET /api/who-is-it/status/:roundId?",
       setWhoIsItSecret: "POST /api/who-is-it/secret",
@@ -478,6 +493,99 @@ app.post(["/api/hidden-fleet/attack", "/api/battleship/attack"], (req, res) => {
   try {
     const body = req.body as { roundId?: string; attacker?: BattleshipOwner; cell?: string };
     const result = submitBattleshipAttack({
+      roundId: body.roundId,
+      attacker: body.attacker ?? "human",
+      cell: body.cell ?? "",
+    });
+    res.json({ ok: true, result });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post(["/api/hidden-fleet-short/round", "/api/battleship-short/round"], (_req, res) => {
+  try {
+    res.json({ ok: true, status: startShortBattleshipRound() });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.get(["/api/hidden-fleet-short/status", "/api/battleship-short/status"], (_req, res) => {
+  try {
+    res.json({ ok: true, status: getShortBattleshipStatus() });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    if (message === "No short hidden fleet round has been started yet.") {
+      res.json({ ok: true, status: null, needsRound: true });
+      return;
+    }
+    sendApiError(res, error);
+  }
+});
+
+app.get(["/api/hidden-fleet-short/status/:roundId", "/api/battleship-short/status/:roundId"], (req, res) => {
+  try {
+    res.json({ ok: true, status: getShortBattleshipStatus({ roundId: String(req.params["roundId"]) }) });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.get(["/api/hidden-fleet-short/attack-view", "/api/battleship-short/attack-view"], (_req, res) => {
+  try {
+    res.json({ ok: true, view: getShortBattleshipAttackView() });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.get(["/api/hidden-fleet-short/attack-view/:roundId", "/api/battleship-short/attack-view/:roundId"], (req, res) => {
+  try {
+    res.json({ ok: true, view: getShortBattleshipAttackView({ roundId: String(req.params["roundId"]) }) });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.get(["/api/hidden-fleet-short/my-sea", "/api/battleship-short/my-sea"], (_req, res) => {
+  try {
+    res.json({ ok: true, view: getShortBattleshipMySea() });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.get(["/api/hidden-fleet-short/my-sea/:roundId", "/api/battleship-short/my-sea/:roundId"], (req, res) => {
+  try {
+    res.json({ ok: true, view: getShortBattleshipMySea({ roundId: String(req.params["roundId"]) }) });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post(["/api/hidden-fleet-short/fleet", "/api/battleship-short/fleet"], (req, res) => {
+  try {
+    const body = req.body as {
+      roundId?: string;
+      owner?: BattleshipOwner;
+      ships?: Array<{ id?: string; start?: string; length: number; orientation: "horizontal" | "vertical"; cells?: string[] }>;
+    };
+    const status = placeShortBattleshipFleet({
+      roundId: body.roundId,
+      owner: body.owner ?? "human",
+      ships: body.ships ?? [],
+    });
+    res.json({ ok: true, status });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post(["/api/hidden-fleet-short/attack", "/api/battleship-short/attack"], (req, res) => {
+  try {
+    const body = req.body as { roundId?: string; attacker?: BattleshipOwner; cell?: string };
+    const result = submitShortBattleshipAttack({
       roundId: body.roundId,
       attacker: body.attacker ?? "human",
       cell: body.cell ?? "",
