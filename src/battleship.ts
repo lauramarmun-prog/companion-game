@@ -182,6 +182,23 @@ function makeOwnSeaMap(ships: ShipSpec[], incomingShots: BattleshipCell[]) {
   return [header, ...body, "Legend: S = your ship, X = human hit on your ship, O = human miss, . = empty"].join("\n");
 }
 
+function makeIncomingShotMap(incomingShots: BattleshipCell[], ships: ShipSpec[]) {
+  const shotMap = makeShotMap(incomingShots, ships);
+  const header = `   ${cols.join(" ")}`;
+  const body = rows.map((row) => {
+    const cells = cols
+      .map((col) => {
+        const result = shotMap.get(`${row}${col}` as BattleshipCell);
+        if (result === "hit") return "X";
+        if (result === "miss") return "O";
+        return ".";
+      })
+      .join(" ");
+    return `${row}  ${cells}`;
+  });
+  return [header, ...body, "Legend: X = human hit on your sea, O = human miss on your sea, . = not attacked"].join("\n");
+}
+
 function makeHitClusters(hits: BattleshipCell[], availableTargets: BattleshipCell[]) {
   const hitSet = new Set(hits);
   const availableSet = new Set(availableTargets);
@@ -319,6 +336,21 @@ function makeOwnSeaGrid(ships: ShipSpec[], incomingShots: BattleshipCell[]) {
   }));
 }
 
+function makeIncomingShotGrid(incomingShots: BattleshipCell[], ships: ShipSpec[]) {
+  const shotMap = new Map(shotResults(incomingShots, ships).map((shot) => [shot.cell, shot.result]));
+  return rows.map((row) => ({
+    row,
+    cells: cols.map((col) => {
+      const cell = `${row}${col}`;
+      const shot = shotMap.get(cell);
+      return {
+        cell,
+        status: shot === "hit" ? "hit_on_your_sea" : shot === "miss" ? "miss_on_your_sea" : "not_attacked",
+      };
+    }),
+  }));
+}
+
 function getPublicStatus(round: BattleshipRound, options?: { includeAiShips?: boolean; includeHumanShips?: boolean }) {
   const includeHumanShips = options?.includeHumanShips ?? true;
   const humanShots = shotResults(round.humanShots, round.aiShips);
@@ -336,12 +368,12 @@ function getPublicStatus(round: BattleshipRound, options?: { includeAiShips?: bo
           "There are two separate seas with the same coordinate labels. A human shot at C3 on your sea does not mean C3 is unavailable on the human sea. For your attacks, only use availableTargets.",
         yourSea: {
           description:
-            "Your AI sea. These are your private ships and the human's shots against you. Do not share ship cells or this map with the human.",
+            "Your AI sea defensive view. Ship coordinates are intentionally hidden from the model; only human shots against your sea are shown.",
           privateDoNotShareWithHuman: true,
-          ships: round.aiShips.map((ship) => publicShip(ship, round.humanShots, true)),
+          ships: round.aiShips.map((ship) => publicShip(ship, round.humanShots, false)),
           incomingShotsFromHuman: humanShots,
-          grid: makeOwnSeaGrid(round.aiShips, round.humanShots),
-          visualMap: makeOwnSeaMap(round.aiShips, round.humanShots),
+          grid: makeIncomingShotGrid(round.humanShots, round.aiShips),
+          visualMap: makeIncomingShotMap(round.humanShots, round.aiShips),
         },
         targetSea: {
           description: "The human sea. This is the only sea you attack with submit_hidden_fleet_attack.",
@@ -374,7 +406,7 @@ function getPublicStatus(round: BattleshipRound, options?: { includeAiShips?: bo
     humanReady: round.humanShips.length === fleet.length,
     aiReady: round.aiShips.length === fleet.length,
     humanShips: round.humanShips.map((ship) => publicShip(ship, round.aiShots, includeHumanShips)),
-    aiShips: round.aiShips.map((ship) => publicShip(ship, round.humanShots, Boolean(options?.includeAiShips))),
+    aiShips: round.aiShips.map((ship) => publicShip(ship, round.humanShots, false)),
     humanShots,
     aiShots,
     shotsByHumanAtAiSea: humanShots,
@@ -453,12 +485,12 @@ export function getBattleshipMySea(input?: { roundId?: string }) {
     currentTurn: round.currentTurn,
     yourSea: {
       description:
-        "Your AI sea only. Use this when you want to inspect the human's incoming shots against your fleet. This is private game information; never reveal, summarize, list, draw, or hint at your ship coordinates to the human.",
+        "Your AI sea defensive view only. Ship coordinates are intentionally hidden from the model; only the human's incoming shots against your sea are shown.",
       privateDoNotShareWithHuman: true,
-      ships: round.aiShips.map((ship) => publicShip(ship, round.humanShots, true)),
+      ships: round.aiShips.map((ship) => publicShip(ship, round.humanShots, false)),
       incomingShotsFromHuman,
-      grid: makeOwnSeaGrid(round.aiShips, round.humanShots),
-      visualMap: makeOwnSeaMap(round.aiShips, round.humanShots),
+      grid: makeIncomingShotGrid(round.humanShots, round.aiShips),
+      visualMap: makeIncomingShotMap(round.humanShots, round.aiShips),
     },
   };
 }

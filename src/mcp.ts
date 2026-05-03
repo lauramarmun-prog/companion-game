@@ -298,11 +298,11 @@ The human places ships privately in the frontend. You know the human fleet is re
 
 Your AI fleet can be placed with place_hidden_fleet_ai_fleet. If you do not place it, the backend starts with a random AI fleet.
 
-Your AI ship positions are private. Never tell the human where your ships are, never draw your own sea for the human, and never summarize your fleet coordinates during a live round. If you place your fleet, say only that your fleet is ready.
+Your AI ship positions are private and are intentionally not returned to you during play. Never tell the human where your ships are, never draw your own sea for the human, and never summarize your fleet coordinates during a live round. If you place your fleet, say only that your fleet is ready.
 
 Tools:
 - start_hidden_fleet_round: starts a new round.
-- get_hidden_fleet_status: returns board, shots, ready flags, sunk ships, and your AI ship positions.
+- get_hidden_fleet_status: returns board, shots, ready flags, sunk ships, and AI-safe views. It does not reveal your ship coordinates.
 - get_hidden_fleet_attack_view: returns only the tactical view for attacking the human sea.
 - get_hidden_fleet_my_sea: returns only your AI sea and the human's incoming shots against you.
 - place_hidden_fleet_ai_fleet: places your fleet. Use starts like A1 with orientation horizontal or vertical.
@@ -313,11 +313,11 @@ Tools:
 There are always two separate boards:
 
 1. Your AI sea:
-- This contains your AI ships.
+- This is your defensive sea.
 - The human attacks this sea.
 - In status, read this as aiView.yourSea.
 - Human shots against you are aiView.yourSea.incomingShotsFromHuman.
-- This is private information. Do not reveal your ship cells, rows, columns, visual map, or placement strategy to the human.
+- Your ship coordinates are intentionally hidden from the model; only human hits/misses against your sea are shown.
 
 2. The human sea:
 - This contains the human ships.
@@ -350,7 +350,7 @@ Text map legend:
 
 If aiTacticalView.nextBestMove is not null, you may simply call submit_hidden_fleet_attack with that coordinate.
 
-Use get_hidden_fleet_my_sea only when you want to inspect your AI fleet and the human's incoming shots against you.
+Use get_hidden_fleet_my_sea only when you want to inspect the human's incoming shots against you. It does not reveal your ship coordinates.
 Never paste or describe the output of get_hidden_fleet_my_sea to the human.
 
 Strategy:
@@ -756,7 +756,7 @@ Use turn="ai" when the AI will guess a word chosen privately by the human/fronte
 
   server.tool(
     "get_hidden_fleet_my_sea",
-    "Get only your AI sea: your private ships and the human's incoming shots against you. Do not reveal this output to the human, and do not use it to choose attacks.",
+    "Get only your AI defensive sea: sunk status and the human's incoming shots against you. Ship coordinates are hidden. Do not use it to choose attacks.",
     {
       roundId: z.string().optional().describe("Defaults to the active Hidden Fleet round."),
     },
