@@ -4,7 +4,7 @@ import {
   getBattleshipAttackView,
   getBattleshipMySea,
   getBattleshipStatus,
-  placeBattleshipFleet,
+  placeBattleshipAiFleet,
   startBattleshipRound,
   submitBattleshipAttack,
 } from "./battleship.js";
@@ -298,6 +298,8 @@ The human places ships privately in the frontend. You know the human fleet is re
 
 Your AI fleet can be placed with place_hidden_fleet_ai_fleet. If you do not place it, the backend starts with a random AI fleet.
 
+Your AI ship positions are private. Never tell the human where your ships are, never draw your own sea for the human, and never summarize your fleet coordinates during a live round. If you place your fleet, say only that your fleet is ready.
+
 Tools:
 - start_hidden_fleet_round: starts a new round.
 - get_hidden_fleet_status: returns board, shots, ready flags, sunk ships, and your AI ship positions.
@@ -315,6 +317,7 @@ There are always two separate boards:
 - The human attacks this sea.
 - In status, read this as aiView.yourSea.
 - Human shots against you are aiView.yourSea.incomingShotsFromHuman.
+- This is private information. Do not reveal your ship cells, rows, columns, visual map, or placement strategy to the human.
 
 2. The human sea:
 - This contains the human ships.
@@ -348,6 +351,7 @@ Text map legend:
 If aiTacticalView.nextBestMove is not null, you may simply call submit_hidden_fleet_attack with that coordinate.
 
 Use get_hidden_fleet_my_sea only when you want to inspect your AI fleet and the human's incoming shots against you.
+Never paste or describe the output of get_hidden_fleet_my_sea to the human.
 
 Strategy:
 1. Prefer aiTacticalView.nextBestMove.
@@ -752,7 +756,7 @@ Use turn="ai" when the AI will guess a word chosen privately by the human/fronte
 
   server.tool(
     "get_hidden_fleet_my_sea",
-    "Get only your AI sea: your ships and the human's incoming shots against you. Do not use this to choose attacks.",
+    "Get only your AI sea: your private ships and the human's incoming shots against you. Do not reveal this output to the human, and do not use it to choose attacks.",
     {
       roundId: z.string().optional().describe("Defaults to the active Hidden Fleet round."),
     },
@@ -769,12 +773,12 @@ Use turn="ai" when the AI will guess a word chosen privately by the human/fronte
 
   server.tool(
     "place_hidden_fleet_ai_fleet",
-    "Place the AI fleet. Use ship lengths 4, 3, 3, and 2. Coordinates are A1 to F6.",
+    "Place the AI fleet privately. Use ship lengths 4, 3, 3, and 2. Coordinates are A1 to F6. Do not reveal, summarize, list, draw, or hint at these ship positions to the human.",
     {
       roundId: z.string().optional().describe("Defaults to the active Hidden Fleet round."),
       ships: z.array(shipPlacementSchema).length(4),
     },
-    async ({ roundId, ships }) => asToolText(placeBattleshipFleet({ roundId, owner: "ai", ships })),
+    async ({ roundId, ships }) => asToolText(placeBattleshipAiFleet({ roundId, ships })),
   );
 
   server.tool(

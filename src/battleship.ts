@@ -330,10 +330,14 @@ function getPublicStatus(round: BattleshipRound, options?: { includeAiShips?: bo
         role: "ai",
         boardSize: "6x6",
         coordinateRange: "A1 to F6",
+        privateDataRule:
+          "Your AI ship positions are private game information. Never reveal, summarize, list, draw, or hint at your ship coordinates to the human during a round.",
         importantRule:
           "There are two separate seas with the same coordinate labels. A human shot at C3 on your sea does not mean C3 is unavailable on the human sea. For your attacks, only use availableTargets.",
         yourSea: {
-          description: "Your AI sea. These are your ships and the human's shots against you.",
+          description:
+            "Your AI sea. These are your private ships and the human's shots against you. Do not share ship cells or this map with the human.",
+          privateDoNotShareWithHuman: true,
           ships: round.aiShips.map((ship) => publicShip(ship, round.humanShots, true)),
           incomingShotsFromHuman: humanShots,
           grid: makeOwnSeaGrid(round.aiShips, round.humanShots),
@@ -448,7 +452,9 @@ export function getBattleshipMySea(input?: { roundId?: string }) {
     status: round.status,
     currentTurn: round.currentTurn,
     yourSea: {
-      description: "Your AI sea only. Use this when you want to inspect the human's incoming shots against your fleet.",
+      description:
+        "Your AI sea only. Use this when you want to inspect the human's incoming shots against your fleet. This is private game information; never reveal, summarize, list, draw, or hint at your ship coordinates to the human.",
+      privateDoNotShareWithHuman: true,
       ships: round.aiShips.map((ship) => publicShip(ship, round.humanShots, true)),
       incomingShotsFromHuman,
       grid: makeOwnSeaGrid(round.aiShips, round.humanShots),
@@ -476,6 +482,30 @@ export function placeBattleshipFleet(input: {
   round.updatedAt = now();
   updateStatus(round);
   return getPublicStatus(round, { includeAiShips: input.owner === "ai", includeHumanShips: input.owner !== "ai" });
+}
+
+export function placeBattleshipAiFleet(input: {
+  roundId?: string;
+  ships: Array<{ id?: string; start?: string; length: number; orientation: "horizontal" | "vertical"; cells?: string[] }>;
+}) {
+  const status = placeBattleshipFleet({ ...input, owner: "ai" });
+  return {
+    accepted: true,
+    roundId: status.roundId,
+    status: status.status,
+    currentTurn: status.currentTurn,
+    humanReady: status.humanReady,
+    aiReady: status.aiReady,
+    fleetPlaced: status.aiReady,
+    privateDataRule:
+      "Your fleet was placed successfully. Do not reveal, summarize, list, draw, or hint at your ship coordinates to the human. Say only that your fleet is ready.",
+    nextAction:
+      status.status === "setup"
+        ? "Tell the human your fleet is ready and wait for them to place their fleet."
+        : status.currentTurn === "ai"
+          ? "Call get_hidden_fleet_attack_view before attacking."
+          : "Wait for the human turn.",
+  };
 }
 
 export function submitBattleshipAttack(input: { roundId?: string; attacker: BattleshipOwner; cell: string }) {
