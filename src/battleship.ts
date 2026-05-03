@@ -128,6 +128,167 @@ function shotResults(shots: BattleshipCell[], defenderShips: ShipSpec[]) {
   }));
 }
 
+function adjacentCells(cell: BattleshipCell) {
+  const parsed = parseCell(cell);
+  const candidates = [
+    { row: parsed.row - 1, col: parsed.col },
+    { row: parsed.row + 1, col: parsed.col },
+    { row: parsed.row, col: parsed.col - 1 },
+    { row: parsed.row, col: parsed.col + 1 },
+  ];
+  return candidates
+    .filter(({ row, col }) => rows[row] && cols[col])
+    .map(({ row, col }) => `${rows[row]}${cols[col]}` as BattleshipCell);
+}
+
+function makeShotMap(shots: BattleshipCell[], defenderShips: ShipSpec[]) {
+  return new Map(shotResults(shots, defenderShips).map((shot) => [shot.cell, shot.result]));
+}
+
+function makeTargetSeaMap(shots: BattleshipCell[], defenderShips: ShipSpec[]) {
+  const shotMap = makeShotMap(shots, defenderShips);
+  const header = `   ${cols.join(" ")}`;
+  const body = rows.map((row) => {
+    const cells = cols
+      .map((col) => {
+        const result = shotMap.get(`${row}${col}` as BattleshipCell);
+        if (result === "hit") return "X";
+        if (result === "miss") return "O";
+        return ".";
+      })
+      .join(" ");
+    return `${row}  ${cells}`;
+  });
+  return [header, ...body, "Legend: X = your hit, O = your miss, . = unknown target"].join("\n");
+}
+
+function makeOwnSeaMap(ships: ShipSpec[], incomingShots: BattleshipCell[]) {
+  const shipCells = occupiedShips(ships);
+  const shotMap = makeShotMap(incomingShots, ships);
+  const header = `   ${cols.join(" ")}`;
+  const body = rows.map((row) => {
+    const cells = cols
+      .map((col) => {
+        const cell = `${row}${col}` as BattleshipCell;
+        const result = shotMap.get(cell);
+        if (result === "hit") return "X";
+        if (result === "miss") return "O";
+        if (shipCells.has(cell)) return "S";
+        return ".";
+      })
+      .join(" ");
+    return `${row}  ${cells}`;
+  });
+  return [header, ...body, "Legend: S = your ship, X = human hit on your ship, O = human miss, . = empty"].join("\n");
+}
+
+function makeHitClusters(hits: BattleshipCell[], availableTargets: BattleshipCell[]) {
+  const hitSet = new Set(hits);
+  const availableSet = new Set(availableTargets);
+  const visited = new Set<BattleshipCell>();
+  const clusters: Array<{
+    cells: BattleshipCell[];
+    orientation: "horizontal" | "vertical" | "unknown";
+    recommendedNextShots: BattleshipCell[];
+  }> = [];
+
+  for (const hit of hits) {
+    if (visited.has(hit)) continue;
+    const stack = [hit];
+    const cluster = new Set<BattleshipCell>();
+    visited.add(hit);
+
+    while (stack.length) {
+      const current = stack.pop()!;
+      cluster.add(current);
+      for (const neighbor of adjacentCells(current)) {
+        if (hitSet.has(neighbor) && !visited.has(neighbor)) {
+          visited.add(neighbor);
+          stack.push(neighbor);
+        }
+      }
+    }
+
+    const cells = [...cluster].sort();
+    const parsed = cells.map(parseCell);
+    const sameRow = parsed.every((cell) => cell.row === parsed[0].row);
+    const sameCol = parsed.every((cell) => cell.col === parsed[0].col);
+    const orientation = cells.length === 1 ? "unknown" : sameRow ? "horizontal" : sameCol ? "vertical" : "unknown";
+    const recommendations = new Set<BattleshipCell>();
+
+    if (orientation === "horizontal") {
+      const row = parsed[0].row;
+      const sortedCols = parsed.map((cell) => cell.col).sort((a, b) => a - b);
+      const ends = [
+        { row, col: sortedCols[0] - 1 },
+        { row, col: sortedCols[sortedCols.length - 1] + 1 },
+      ];
+      for (const end of ends) {
+        const cell = rows[end.row] && cols[end.col] ? (`${rows[end.row]}${cols[end.col]}` as BattleshipCell) : undefined;
+        if (cell && availableSet.has(cell)) recommendations.add(cell);
+      }
+    } else if (orientation === "vertical") {
+      const col = parsed[0].col;
+      const sortedRows = parsed.map((cell) => cell.row).sort((a, b) => a - b);
+      const ends = [
+        { row: sortedRows[0] - 1, col },
+        { row: sortedRows[sortedRows.length - 1] + 1, col },
+      ];
+      for (const end of ends) {
+        const cell = rows[end.row] && cols[end.col] ? (`${rows[end.row]}${cols[end.col]}` as BattleshipCell) : undefined;
+        if (cell && availableSet.has(cell)) recommendations.add(cell);
+      }
+    }
+
+    if (!recommendations.size) {
+      for (const cell of cells) {
+        for (const neighbor of adjacentCells(cell)) {
+          if (availableSet.has(neighbor)) recommendations.add(neighbor);
+        }
+      }
+    }
+
+    clusters.push({
+      cells,
+      orientation,
+      recommendedNextShots: [...recommendations],
+    });
+  }
+
+  return clusters;
+}
+
+function makeAiTacticalView(round: BattleshipRound, aiShots: ReturnType<typeof shotResults>, availableTargets: BattleshipCell[]) {
+  const yourHits = aiShots.filter((shot) => shot.result === "hit").map((shot) => shot.cell);
+  const yourMisses = aiShots.filter((shot) => shot.result === "miss").map((shot) => shot.cell);
+  const hitClusters = makeHitClusters(yourHits, availableTargets);
+  const recommendedNextShots = [...new Set(hitClusters.flatMap((cluster) => cluster.recommendedNextShots))];
+  const checkerboardTargets = availableTargets.filter((cell) => {
+    const parsed = parseCell(cell);
+    return (parsed.row + parsed.col) % 2 === 0;
+  });
+  const fallbackTargets = checkerboardTargets.length ? checkerboardTargets : availableTargets;
+  const nextBestMove = recommendedNextShots[0] ?? fallbackTargets[0] ?? null;
+
+  return {
+    instruction:
+      "Use this tactical view first. You are attacking the human sea only. Choose nextBestMove when it exists, or choose from recommendedNextShots/availableTargets. Never attack a coordinate in doNotShoot.",
+    boardSize: "6x6",
+    coordinateRange: "A1 to F6",
+    rows,
+    columns: cols,
+    doNotShoot: [...round.aiShots],
+    yourPreviousShots: [...round.aiShots],
+    yourHits,
+    yourMisses,
+    availableTargets,
+    hitClusters,
+    recommendedNextShots,
+    nextBestMove,
+    targetSeaMap: makeTargetSeaMap(round.aiShots, round.humanShips),
+  };
+}
+
 function makeTargetGrid(shots: BattleshipCell[], defenderShips: ShipSpec[]) {
   const shotMap = new Map(shotResults(shots, defenderShips).map((shot) => [shot.cell, shot.result]));
   return rows.map((row) => ({
@@ -163,6 +324,7 @@ function getPublicStatus(round: BattleshipRound, options?: { includeAiShips?: bo
   const humanShots = shotResults(round.humanShots, round.aiShips);
   const aiShots = shotResults(round.aiShots, round.humanShips);
   const availableAiTargets = allCells().filter((cell) => !round.aiShots.includes(cell));
+  const aiTacticalView = options?.includeAiShips ? makeAiTacticalView(round, aiShots, availableAiTargets) : undefined;
   const aiView = options?.includeAiShips
     ? {
         role: "ai",
@@ -175,18 +337,22 @@ function getPublicStatus(round: BattleshipRound, options?: { includeAiShips?: bo
           ships: round.aiShips.map((ship) => publicShip(ship, round.humanShots, true)),
           incomingShotsFromHuman: humanShots,
           grid: makeOwnSeaGrid(round.aiShips, round.humanShots),
+          visualMap: makeOwnSeaMap(round.aiShips, round.humanShots),
         },
         targetSea: {
           description: "The human sea. This is the only sea you attack with submit_hidden_fleet_attack.",
           yourShotsAtHumanSea: aiShots,
           availableTargets: availableAiTargets,
           grid: makeTargetGrid(round.aiShots, round.humanShips),
+          visualMap: aiTacticalView?.targetSeaMap,
+          tacticalView: aiTacticalView,
         },
+        tacticalView: aiTacticalView,
         nextAction:
           round.status !== "playing"
             ? `Round is ${round.status}.`
             : round.currentTurn === "ai"
-              ? "Choose exactly one coordinate from targetSea.availableTargets and call submit_hidden_fleet_attack."
+              ? `Choose ${aiTacticalView?.nextBestMove ?? "one coordinate from targetSea.tacticalView.availableTargets"} and call submit_hidden_fleet_attack.`
               : "Wait for the human to attack your sea.",
       }
     : undefined;
@@ -210,6 +376,7 @@ function getPublicStatus(round: BattleshipRound, options?: { includeAiShips?: bo
     shotsByHumanAtAiSea: humanShots,
     shotsByAiAtHumanSea: aiShots,
     aiView,
+    aiTacticalView,
   };
 }
 
@@ -253,6 +420,41 @@ export function getBattleshipStatus(input?: { roundId?: string; includeAiShips?:
     includeAiShips: input?.includeAiShips,
     includeHumanShips: !input?.includeAiShips,
   });
+}
+
+export function getBattleshipAttackView(input?: { roundId?: string }) {
+  const round = getRound(input?.roundId);
+  const aiShots = shotResults(round.aiShots, round.humanShips);
+  const availableTargets = allCells().filter((cell) => !round.aiShots.includes(cell));
+  return {
+    roundId: round.id,
+    status: round.status,
+    currentTurn: round.currentTurn,
+    aiTacticalView: makeAiTacticalView(round, aiShots, availableTargets),
+    nextAction:
+      round.status !== "playing"
+        ? `Round is ${round.status}.`
+        : round.currentTurn === "ai"
+          ? "Call submit_hidden_fleet_attack with aiTacticalView.nextBestMove, or choose from aiTacticalView.availableTargets."
+          : "Wait for the human turn to finish before attacking.",
+  };
+}
+
+export function getBattleshipMySea(input?: { roundId?: string }) {
+  const round = getRound(input?.roundId);
+  const incomingShotsFromHuman = shotResults(round.humanShots, round.aiShips);
+  return {
+    roundId: round.id,
+    status: round.status,
+    currentTurn: round.currentTurn,
+    yourSea: {
+      description: "Your AI sea only. Use this when you want to inspect the human's incoming shots against your fleet.",
+      ships: round.aiShips.map((ship) => publicShip(ship, round.humanShots, true)),
+      incomingShotsFromHuman,
+      grid: makeOwnSeaGrid(round.aiShips, round.humanShots),
+      visualMap: makeOwnSeaMap(round.aiShips, round.humanShots),
+    },
+  };
 }
 
 export function placeBattleshipFleet(input: {

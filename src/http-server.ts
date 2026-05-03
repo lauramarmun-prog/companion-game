@@ -5,6 +5,8 @@ import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import {
+  getBattleshipAttackView,
+  getBattleshipMySea,
   getBattleshipStatus,
   placeBattleshipFleet,
   startBattleshipRound,
@@ -112,6 +114,8 @@ app.get("/", (_req, res) => {
       submitWordQuestGuess: "POST /api/word-quest/guess",
       startHiddenFleetRound: "POST /api/hidden-fleet/round",
       getHiddenFleetStatus: "GET /api/hidden-fleet/status/:roundId?",
+      getHiddenFleetAttackView: "GET /api/hidden-fleet/attack-view/:roundId?",
+      getHiddenFleetMySea: "GET /api/hidden-fleet/my-sea/:roundId?",
       placeHiddenFleet: "POST /api/hidden-fleet/fleet",
       submitHiddenFleetAttack: "POST /api/hidden-fleet/attack",
       startWhoIsItRound: "POST /api/who-is-it/round",
@@ -415,6 +419,38 @@ app.get(["/api/hidden-fleet/status", "/api/battleship/status"], (_req, res) => {
 app.get(["/api/hidden-fleet/status/:roundId", "/api/battleship/status/:roundId"], (req, res) => {
   try {
     res.json({ ok: true, status: getBattleshipStatus({ roundId: String(req.params["roundId"]) }) });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.get(["/api/hidden-fleet/attack-view", "/api/battleship/attack-view"], (_req, res) => {
+  try {
+    res.json({ ok: true, view: getBattleshipAttackView() });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.get(["/api/hidden-fleet/attack-view/:roundId", "/api/battleship/attack-view/:roundId"], (req, res) => {
+  try {
+    res.json({ ok: true, view: getBattleshipAttackView({ roundId: String(req.params["roundId"]) }) });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.get(["/api/hidden-fleet/my-sea", "/api/battleship/my-sea"], (_req, res) => {
+  try {
+    res.json({ ok: true, view: getBattleshipMySea() });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.get(["/api/hidden-fleet/my-sea/:roundId", "/api/battleship/my-sea/:roundId"], (req, res) => {
+  try {
+    res.json({ ok: true, view: getBattleshipMySea({ roundId: String(req.params["roundId"]) }) });
   } catch (error) {
     sendApiError(res, error);
   }

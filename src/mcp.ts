@@ -1,6 +1,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { getBattleshipStatus, placeBattleshipFleet, startBattleshipRound, submitBattleshipAttack } from "./battleship.js";
+import {
+  getBattleshipAttackView,
+  getBattleshipMySea,
+  getBattleshipStatus,
+  placeBattleshipFleet,
+  startBattleshipRound,
+  submitBattleshipAttack,
+} from "./battleship.js";
 import { getGuessWhoStatus, setGuessWhoSecret, startGuessWhoRound, submitGuessWhoFinalGuess } from "./guessWho.js";
 import { getHangmanStatus, startHangmanRound, submitHangmanLetter, submitHangmanWord } from "./hangman.js";
 import { addQuizQuestion, finishQuizRound, getQuizStatus, startQuizRound, submitQuizAnswer } from "./quiz.js";
@@ -294,6 +301,8 @@ Your AI fleet can be placed with place_hidden_fleet_ai_fleet. If you do not plac
 Tools:
 - start_hidden_fleet_round: starts a new round.
 - get_hidden_fleet_status: returns board, shots, ready flags, sunk ships, and your AI ship positions.
+- get_hidden_fleet_attack_view: returns only the tactical view for attacking the human sea.
+- get_hidden_fleet_my_sea: returns only your AI sea and the human's incoming shots against you.
 - place_hidden_fleet_ai_fleet: places your fleet. Use starts like A1 with orientation horizontal or vertical.
 - submit_hidden_fleet_attack: attack the human sea with a coordinate. The API returns hit or miss, and sunk when a ship is completed.
 
@@ -313,14 +322,38 @@ There are always two separate boards:
 - In status, read this as aiView.targetSea.
 - Your previous attacks are aiView.targetSea.yourShotsAtHumanSea.
 - Your safe legal targets are aiView.targetSea.availableTargets.
+- Your easiest AI-friendly helper is aiView.tacticalView, also returned as aiTacticalView.
 
 Important: both seas use the same coordinates, A1 to F6. If the human shot C3 on your sea, C3 may still be a valid target on the human sea. For your next attack, ignore humanShots and choose only from aiView.targetSea.availableTargets.
 
+## AI tactical view
+
+Hidden Fleet can be spatially confusing for language models, so use get_hidden_fleet_attack_view on your attack turn. It returns only the human sea attack data and does not include your AI sea.
+
+When you call get_hidden_fleet_attack_view, prefer these fields:
+- aiTacticalView.nextBestMove: the simplest recommended coordinate to attack next.
+- aiTacticalView.recommendedNextShots: good follow-up shots, especially after a hit.
+- aiTacticalView.availableTargets: legal coordinates you have not attacked yet.
+- aiTacticalView.doNotShoot: coordinates you already attacked on the human sea. Never shoot these.
+- aiTacticalView.yourHits: your successful attacks on the human sea.
+- aiTacticalView.yourMisses: your missed attacks on the human sea.
+- aiTacticalView.hitClusters: grouped hits plus recommended adjacent follow-ups.
+- aiTacticalView.targetSeaMap: a text map of the human sea from your point of view.
+
+Text map legend:
+- X = your hit on the human sea.
+- O = your miss on the human sea.
+- . = unknown target.
+
+If aiTacticalView.nextBestMove is not null, you may simply call submit_hidden_fleet_attack with that coordinate.
+
+Use get_hidden_fleet_my_sea only when you want to inspect your AI fleet and the human's incoming shots against you.
+
 Strategy:
-1. Attack checkerboard-style first.
-2. When you hit, attack adjacent cells.
-3. Track misses so you do not repeat a coordinate.
-4. Prefer coordinates from aiView.targetSea.availableTargets.
+1. Prefer aiTacticalView.nextBestMove.
+2. If nextBestMove is null, choose from aiTacticalView.recommendedNextShots.
+3. If there are no recommendations, choose from aiTacticalView.availableTargets.
+4. Never choose from aiTacticalView.doNotShoot.
 5. Remember the fleet lengths: 4, 3, 3, and 2.`;
 
 const guessWhoHowToPlay = `# Who is it? MCP - Game Guide for AIs
@@ -701,11 +734,29 @@ Use turn="ai" when the AI will guess a word chosen privately by the human/fronte
 
   server.tool(
     "get_hidden_fleet_status",
-    "Get Hidden Fleet status. Use aiView.targetSea.availableTargets for AI attacks; do not confuse human shots on your sea with your shots on the human sea.",
+    "Get full Hidden Fleet status. Prefer get_hidden_fleet_attack_view on your attack turn and get_hidden_fleet_my_sea for defense, so the two seas stay separated.",
     {
       roundId: z.string().optional().describe("Defaults to the active Hidden Fleet round."),
     },
     async ({ roundId }) => asToolText(getBattleshipStatus({ roundId, includeAiShips: true })),
+  );
+
+  server.tool(
+    "get_hidden_fleet_attack_view",
+    "Get only the AI tactical view for attacking the human sea. This does not include your AI ships, your sea, or the human's shots against you.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active Hidden Fleet round."),
+    },
+    async ({ roundId }) => asToolText(getBattleshipAttackView({ roundId })),
+  );
+
+  server.tool(
+    "get_hidden_fleet_my_sea",
+    "Get only your AI sea: your ships and the human's incoming shots against you. Do not use this to choose attacks.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active Hidden Fleet round."),
+    },
+    async ({ roundId }) => asToolText(getBattleshipMySea({ roundId })),
   );
 
   const shipPlacementSchema = z.object({

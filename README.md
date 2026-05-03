@@ -40,6 +40,8 @@ The first pilot game is Hangman. Word Quest, Quiz, Tic-Tac-Toe, Hidden Fleet, an
 - `hidden_fleet_how_to_play`: returns board coordinates, fleet sizes, and AI strategy notes.
 - `start_hidden_fleet_round`: starts a 6 by 6 round.
 - `get_hidden_fleet_status`: returns public status plus AI ship positions for the AI only.
+- `get_hidden_fleet_attack_view`: returns only the AI attack view for the human sea, with `nextBestMove`, `recommendedNextShots`, `availableTargets`, and `doNotShoot`.
+- `get_hidden_fleet_my_sea`: returns only the AI sea and the human's incoming shots against it.
 - `place_hidden_fleet_ai_fleet`: lets the AI place ships with lengths 4, 3, 3, and 2.
 - `submit_hidden_fleet_attack`: attacks a coordinate like A2 and returns `agua` or `tocado`.
 
@@ -81,6 +83,8 @@ Useful API calls:
 - `POST /api/word-quest/guess`
 - `POST /api/hidden-fleet/round`
 - `GET /api/hidden-fleet/status`
+- `GET /api/hidden-fleet/attack-view`
+- `GET /api/hidden-fleet/my-sea`
 - `POST /api/hidden-fleet/fleet`
 - `POST /api/hidden-fleet/attack`
 - `POST /api/who-is-it/round`
