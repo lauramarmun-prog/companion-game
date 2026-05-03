@@ -43,43 +43,11 @@ import { getWordlyStatus, startWordlyRound, submitWordlyGuess, type WordlyTurn }
 const port = Number(process.env.PORT ?? 3000);
 const allowedOrigin = process.env.FRONTEND_ORIGIN ?? "*";
 
+const app = createMcpExpressApp({ host: "0.0.0.0" });
+
 function normalizeOrigin(origin: string) {
   return origin.replace(/\/$/, "");
 }
-
-function hostnameFromValue(value: string) {
-  const clean = value.trim().replace(/\/$/, "");
-  if (!clean || clean === "*") return null;
-
-  try {
-    return new URL(clean.includes("://") ? clean : `https://${clean}`).hostname;
-  } catch {
-    return null;
-  }
-}
-
-function getMcpAllowedHosts() {
-  const localHosts = ["localhost", "127.0.0.1", "[::1]"];
-  const configuredHosts = [
-    process.env.MCP_ALLOWED_HOSTS,
-    process.env.RAILWAY_PUBLIC_DOMAIN,
-    process.env.RAILWAY_STATIC_URL,
-    process.env.PUBLIC_URL,
-    process.env.BACKEND_PUBLIC_URL,
-    process.env.COMPANION_BACKEND_URL,
-    allowedOrigin,
-    "companion-game-production-0d44.up.railway.app",
-  ];
-
-  const hosts = configuredHosts
-    .flatMap((value) => String(value ?? "").split(","))
-    .map(hostnameFromValue)
-    .filter((host): host is string => Boolean(host));
-
-  return [...new Set([...localHosts, ...hosts])];
-}
-
-const app = createMcpExpressApp({ host: "0.0.0.0", allowedHosts: getMcpAllowedHosts() });
 
 const allowedOrigins = allowedOrigin
   .split(",")
