@@ -278,7 +278,12 @@ function makeHitClusters(hits: BattleshipCell[], availableTargets: BattleshipCel
 function makeAiTacticalView(round: BattleshipRound, aiShots: ReturnType<typeof shotResults>, availableTargets: BattleshipCell[]) {
   const yourHits = aiShots.filter((shot) => shot.result === "hit").map((shot) => shot.cell);
   const yourMisses = aiShots.filter((shot) => shot.result === "miss").map((shot) => shot.cell);
-  const hitClusters = makeHitClusters(yourHits, availableTargets);
+  const resolvedHitCells = new Set(
+    round.humanShips.filter((ship) => shipSunk(ship, round.aiShots)).flatMap((ship) => ship.cells),
+  );
+  const activeHits = yourHits.filter((cell) => !resolvedHitCells.has(cell));
+  const resolvedHits = yourHits.filter((cell) => resolvedHitCells.has(cell));
+  const hitClusters = makeHitClusters(activeHits, availableTargets);
   const recommendedNextShots = [...new Set(hitClusters.flatMap((cluster) => cluster.recommendedNextShots))];
   const checkerboardTargets = availableTargets.filter((cell) => {
     const parsed = parseCell(cell);
@@ -298,6 +303,8 @@ function makeAiTacticalView(round: BattleshipRound, aiShots: ReturnType<typeof s
     yourPreviousShots: [...round.aiShots],
     yourHits,
     yourMisses,
+    activeHits,
+    resolvedHits,
     availableTargets,
     hitClusters,
     recommendedNextShots,
