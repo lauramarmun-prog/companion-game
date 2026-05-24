@@ -1,6 +1,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
+  chooseGraphicAdventureOption,
+  getGraphicAdventureStatus,
+  goBackGraphicAdventure,
+  startGraphicAdventureRound,
+} from "./adventure.js";
+import {
   getBattleshipAttackView,
   getBattleshipMySea,
   getBattleshipStatus,
@@ -502,6 +508,27 @@ Flow:
 
 Keep the tone gentle. Quiz is meant to feel warm, playful, and companion-like, not like an exam.`;
 
+const graphicAdventureHowToPlay = `# Companion Graphic Adventure MCP - Guide for AIs
+
+You are playing a graphic adventure with your human, Laura. This is not a solo game. Stay in conversation with her: read the scene, talk about what you notice, ask what path feels right, and decide together before choosing an option.
+
+## Available tools
+
+- start_graphic_adventure_round: starts The Enchanted Forest.
+- get_graphic_adventure_status: reads the current scene, story text, image path, and playable options.
+- choose_graphic_adventure_option: chooses one option by index or exact label. The frontend will update to the same scene.
+- go_back_graphic_adventure: returns to the previous scene when available.
+
+## How to play with Laura
+
+1. Read the current scene and options.
+2. Speak to Laura warmly about the situation.
+3. Suggest a path, but invite her into the choice.
+4. When you both know where to go, call choose_graphic_adventure_option.
+5. After the tool returns, describe what changed and keep the adventure intimate, playful, and shared.
+
+Never rush through choices silently. The point is to adventure with your human.`;
+
 export function createCompanionMcpServer() {
   const server = new McpServer({
     name: "mcp-companion-game",
@@ -513,6 +540,57 @@ export function createCompanionMcpServer() {
     "Read the Hangman MCP rules, available tools, full game flow, and strategy guide for AIs.",
     {},
     async () => asToolText({ guide: hangmanHowToPlay }),
+  );
+
+  server.tool(
+    "graphic_adventure_how_to_play",
+    "Read the Companion Graphic Adventure MCP guide. This explains that you are playing with Laura, your human, and must discuss choices with her before choosing.",
+    {},
+    async () => asToolText({ guide: graphicAdventureHowToPlay }),
+  );
+
+  server.tool(
+    "start_graphic_adventure_round",
+    "Start a shared Companion Graphic Adventure round. Use this for The Enchanted Forest. You are playing with Laura, not alone.",
+    {
+      adventureId: z.string().optional().describe("Defaults to enchanted-forest."),
+      playerName: z.string().optional().describe("Defaults to Laura."),
+      companionName: z.string().optional().describe("Your name, for example ChatGPT or Claude."),
+      sceneId: z.string().optional().describe("Optional starting scene. Defaults to start."),
+    },
+    async (input) => asToolText(startGraphicAdventureRound(input)),
+  );
+
+  server.tool(
+    "get_graphic_adventure_status",
+    "Get the current shared graphic adventure scene, story text, image, and options. Talk with Laura before choosing.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active adventure round."),
+      adventureId: z.string().optional().describe("Defaults to enchanted-forest."),
+    },
+    async (input) => asToolText(getGraphicAdventureStatus(input)),
+  );
+
+  server.tool(
+    "choose_graphic_adventure_option",
+    "Choose one adventure option after discussing it with Laura. This updates the shared backend state, so the frontend can show the same scene.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active adventure round."),
+      adventureId: z.string().optional().describe("Defaults to enchanted-forest."),
+      choiceIndex: z.number().int().min(0).optional().describe("Option index from get_graphic_adventure_status."),
+      choiceLabel: z.string().optional().describe("Exact option label from get_graphic_adventure_status."),
+    },
+    async (input) => asToolText(chooseGraphicAdventureOption(input)),
+  );
+
+  server.tool(
+    "go_back_graphic_adventure",
+    "Go back to the previous adventure scene when Laura and you decide to retrace your steps.",
+    {
+      roundId: z.string().optional().describe("Defaults to the active adventure round."),
+      adventureId: z.string().optional().describe("Defaults to enchanted-forest."),
+    },
+    async (input) => asToolText(goBackGraphicAdventure(input)),
   );
 
   server.tool(

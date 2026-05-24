@@ -5,6 +5,12 @@ import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import {
+  chooseGraphicAdventureOption,
+  getGraphicAdventureStatus,
+  goBackGraphicAdventure,
+  startGraphicAdventureRound,
+} from "./adventure.js";
+import {
   getBattleshipAttackView,
   getBattleshipMySea,
   getBattleshipStatus,
@@ -101,6 +107,7 @@ app.get("/", (_req, res) => {
       "hidden-fleet",
       "hidden-fleet-short",
       "who-is-it",
+      "graphic-adventures",
       "empty-status-ok",
     ],
     mcp: "/mcp",
@@ -137,6 +144,10 @@ app.get("/", (_req, res) => {
       getWhoIsItStatus: "GET /api/who-is-it/status/:roundId?",
       setWhoIsItSecret: "POST /api/who-is-it/secret",
       submitWhoIsItFinalGuess: "POST /api/who-is-it/guess",
+      startGraphicAdventureRound: "POST /api/adventures/:adventureId/round",
+      getGraphicAdventureStatus: "GET /api/adventures/:adventureId/status/:roundId?",
+      chooseGraphicAdventureOption: "POST /api/adventures/:adventureId/choice",
+      goBackGraphicAdventure: "POST /api/adventures/:adventureId/back",
     },
   });
 });
@@ -651,6 +662,77 @@ app.post(["/api/who-is-it/guess", "/api/guess-who/guess"], (req, res) => {
       guess: body.guess ?? "",
     });
     res.json({ ok: true, result });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post("/api/adventures/:adventureId/round", (req, res) => {
+  try {
+    const body = req.body as { playerName?: string; companionName?: string; sceneId?: string };
+    const status = startGraphicAdventureRound({
+      adventureId: req.params["adventureId"],
+      playerName: body.playerName,
+      companionName: body.companionName,
+      sceneId: body.sceneId,
+    });
+    res.json({ ok: true, status });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.get("/api/adventures/:adventureId/status", (req, res) => {
+  try {
+    res.json({ ok: true, status: getGraphicAdventureStatus({ adventureId: req.params["adventureId"] }) });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    if (message === "No graphic adventure round has been started yet.") {
+      res.json({ ok: true, status: null, needsRound: true });
+      return;
+    }
+
+    sendApiError(res, error);
+  }
+});
+
+app.get("/api/adventures/:adventureId/status/:roundId", (req, res) => {
+  try {
+    res.json({
+      ok: true,
+      status: getGraphicAdventureStatus({
+        adventureId: req.params["adventureId"],
+        roundId: req.params["roundId"],
+      }),
+    });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post("/api/adventures/:adventureId/choice", (req, res) => {
+  try {
+    const body = req.body as { roundId?: string; choiceIndex?: number; choiceLabel?: string };
+    const result = chooseGraphicAdventureOption({
+      adventureId: req.params["adventureId"],
+      roundId: body.roundId,
+      choiceIndex: body.choiceIndex,
+      choiceLabel: body.choiceLabel,
+    });
+    res.json({ ok: true, result });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post("/api/adventures/:adventureId/back", (req, res) => {
+  try {
+    const body = req.body as { roundId?: string };
+    const status = goBackGraphicAdventure({
+      adventureId: req.params["adventureId"],
+      roundId: body.roundId,
+    });
+    res.json({ ok: true, status });
   } catch (error) {
     sendApiError(res, error);
   }
