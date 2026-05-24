@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { forestScenesData } from "./adventureData.js";
 
@@ -35,6 +36,11 @@ type AdventureRound = {
 
 const DEFAULT_ADVENTURE_ID = "enchanted-forest";
 const DEFAULT_FRONTEND_DIR = path.resolve(process.cwd(), "..", "Companion Games");
+const DEFAULT_STATE_FILE = path.join(
+  process.env.LOCALAPPDATA || os.tmpdir(),
+  "Companion Games",
+  "graphic-adventure-state.json",
+);
 
 const rounds = new Map<string, AdventureRound>();
 const activeRounds = new Map<string, string>();
@@ -43,6 +49,47 @@ let cachedAdventures: Record<string, AdventureDefinition> | null = null;
 
 function getFrontendDir() {
   return process.env.COMPANION_GAMES_FRONTEND_DIR || DEFAULT_FRONTEND_DIR;
+}
+
+function getStateFile() {
+  return process.env.COMPANION_GAMES_STATE_FILE || DEFAULT_STATE_FILE;
+}
+
+function loadState() {
+  const stateFile = getStateFile();
+  if (!existsSync(stateFile)) return;
+
+  const parsed = JSON.parse(readFileSync(stateFile, "utf8")) as {
+    rounds?: AdventureRound[];
+    activeRounds?: Record<string, string>;
+  };
+
+  rounds.clear();
+  activeRounds.clear();
+
+  for (const round of parsed.rounds || []) {
+    rounds.set(round.id, round);
+  }
+
+  for (const [adventureId, roundId] of Object.entries(parsed.activeRounds || {})) {
+    activeRounds.set(adventureId, roundId);
+  }
+}
+
+function saveState() {
+  const stateFile = getStateFile();
+  mkdirSync(path.dirname(stateFile), { recursive: true });
+  writeFileSync(
+    stateFile,
+    JSON.stringify(
+      {
+        rounds: Array.from(rounds.values()),
+        activeRounds: Object.fromEntries(activeRounds),
+      },
+      null,
+      2,
+    ),
+  );
 }
 
 function loadForestScenes() {
@@ -93,6 +140,8 @@ function getAdventure(adventureId = DEFAULT_ADVENTURE_ID) {
 }
 
 function resolveRound(roundId?: string, adventureId = DEFAULT_ADVENTURE_ID) {
+  loadState();
+
   const id = roundId || activeRounds.get(adventureId);
   if (!id) throw new Error("No graphic adventure round has been started yet.");
 
@@ -141,6 +190,8 @@ export function startGraphicAdventureRound(input: {
   companionName?: string;
   sceneId?: string;
 } = {}) {
+  loadState();
+
   const adventureId = input.adventureId || DEFAULT_ADVENTURE_ID;
   const adventure = getAdventure(adventureId);
   const sceneId = input.sceneId || "start";
@@ -158,6 +209,7 @@ export function startGraphicAdventureRound(input: {
 
   rounds.set(round.id, round);
   activeRounds.set(adventureId, round.id);
+  saveState();
   return formatStatus(round);
 }
 
@@ -189,6 +241,7 @@ export function chooseGraphicAdventureOption(input: {
 
   round.currentScene = choice.next;
   round.updatedAt = new Date().toISOString();
+  saveState();
   return {
     chosen: choice,
     status: formatStatus(round),
@@ -202,5 +255,6 @@ export function goBackGraphicAdventure(input: { roundId?: string; adventureId?: 
 
   round.currentScene = previousScene;
   round.updatedAt = new Date().toISOString();
+  saveState();
   return formatStatus(round);
 }
