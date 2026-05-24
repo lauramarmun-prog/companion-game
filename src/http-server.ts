@@ -92,6 +92,23 @@ function sendApiError(res: Response, error: unknown) {
   res.status(400).json({ ok: false, error: message });
 }
 
+function readAdventureAccess(req: Request) {
+  return {
+    accessCode:
+      typeof req.headers["x-companion-adventure-code"] === "string"
+        ? req.headers["x-companion-adventure-code"]
+        : typeof req.query["accessCode"] === "string"
+          ? req.query["accessCode"]
+          : undefined,
+    accessCodeHash:
+      typeof req.headers["x-companion-adventure-code-hash"] === "string"
+        ? req.headers["x-companion-adventure-code-hash"]
+        : typeof req.query["accessCodeHash"] === "string"
+          ? req.query["accessCodeHash"]
+          : undefined,
+  };
+}
+
 app.get("/", (_req, res) => {
   res.json({
     ok: true,
@@ -669,12 +686,20 @@ app.post(["/api/who-is-it/guess", "/api/guess-who/guess"], (req, res) => {
 
 app.post("/api/adventures/:adventureId/round", (req, res) => {
   try {
-    const body = req.body as { playerName?: string; companionName?: string; sceneId?: string };
+    const body = req.body as {
+      playerName?: string;
+      companionName?: string;
+      sceneId?: string;
+      accessCode?: string;
+      accessCodeHash?: string;
+    };
     const status = startGraphicAdventureRound({
       adventureId: req.params["adventureId"],
       playerName: body.playerName,
       companionName: body.companionName,
       sceneId: body.sceneId,
+      accessCode: body.accessCode,
+      accessCodeHash: body.accessCodeHash || readAdventureAccess(req).accessCodeHash,
     });
     res.json({ ok: true, status });
   } catch (error) {
@@ -684,7 +709,10 @@ app.post("/api/adventures/:adventureId/round", (req, res) => {
 
 app.get("/api/adventures/:adventureId/status", (req, res) => {
   try {
-    res.json({ ok: true, status: getGraphicAdventureStatus({ adventureId: req.params["adventureId"] }) });
+    res.json({
+      ok: true,
+      status: getGraphicAdventureStatus({ adventureId: req.params["adventureId"], ...readAdventureAccess(req) }),
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     if (message === "No graphic adventure round has been started yet.") {
@@ -703,6 +731,7 @@ app.get("/api/adventures/:adventureId/status/:roundId", (req, res) => {
       status: getGraphicAdventureStatus({
         adventureId: req.params["adventureId"],
         roundId: req.params["roundId"],
+        ...readAdventureAccess(req),
       }),
     });
   } catch (error) {
@@ -712,12 +741,20 @@ app.get("/api/adventures/:adventureId/status/:roundId", (req, res) => {
 
 app.post("/api/adventures/:adventureId/choice", (req, res) => {
   try {
-    const body = req.body as { roundId?: string; choiceIndex?: number; choiceLabel?: string };
+    const body = req.body as {
+      roundId?: string;
+      choiceIndex?: number;
+      choiceLabel?: string;
+      accessCode?: string;
+      accessCodeHash?: string;
+    };
     const result = chooseGraphicAdventureOption({
       adventureId: req.params["adventureId"],
       roundId: body.roundId,
       choiceIndex: body.choiceIndex,
       choiceLabel: body.choiceLabel,
+      accessCode: body.accessCode,
+      accessCodeHash: body.accessCodeHash || readAdventureAccess(req).accessCodeHash,
     });
     res.json({ ok: true, result });
   } catch (error) {
@@ -727,10 +764,12 @@ app.post("/api/adventures/:adventureId/choice", (req, res) => {
 
 app.post("/api/adventures/:adventureId/back", (req, res) => {
   try {
-    const body = req.body as { roundId?: string };
+    const body = req.body as { roundId?: string; accessCode?: string; accessCodeHash?: string };
     const status = goBackGraphicAdventure({
       adventureId: req.params["adventureId"],
       roundId: body.roundId,
+      accessCode: body.accessCode,
+      accessCodeHash: body.accessCodeHash || readAdventureAccess(req).accessCodeHash,
     });
     res.json({ ok: true, status });
   } catch (error) {

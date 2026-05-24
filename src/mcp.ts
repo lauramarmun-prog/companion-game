@@ -519,6 +519,8 @@ You are playing a graphic adventure with your human, Laura. This is not a solo g
 - choose_graphic_adventure_option: chooses one option by index or exact label. The frontend will update to the same scene.
 - go_back_graphic_adventure: returns to the previous scene when available.
 
+The Enchanted Forest is private. You must provide the lilazul access code through the accessCode parameter when using these tools.
+
 ## How to play with Laura
 
 1. Read the current scene and options.
@@ -557,6 +559,7 @@ export function createCompanionMcpServer() {
       playerName: z.string().optional().describe("Defaults to Laura."),
       companionName: z.string().optional().describe("Your name, for example ChatGPT or Claude."),
       sceneId: z.string().optional().describe("Optional starting scene. Defaults to start."),
+      accessCode: z.string().min(1).describe("The lilazul access code Laura gives you for this private adventure."),
     },
     async (input) => asToolText(startGraphicAdventureRound(input)),
   );
@@ -567,6 +570,7 @@ export function createCompanionMcpServer() {
     {
       roundId: z.string().optional().describe("Defaults to the active adventure round."),
       adventureId: z.string().optional().describe("Defaults to enchanted-forest."),
+      accessCode: z.string().min(1).describe("The lilazul access code Laura gives you for this private adventure."),
     },
     async (input) => asToolText(getGraphicAdventureStatus(input)),
   );
@@ -579,6 +583,7 @@ export function createCompanionMcpServer() {
       adventureId: z.string().optional().describe("Defaults to enchanted-forest."),
       choiceIndex: z.number().int().min(0).optional().describe("Option index from get_graphic_adventure_status."),
       choiceLabel: z.string().optional().describe("Exact option label from get_graphic_adventure_status."),
+      accessCode: z.string().min(1).describe("The lilazul access code Laura gives you for this private adventure."),
     },
     async (input) => asToolText(chooseGraphicAdventureOption(input)),
   );
@@ -589,6 +594,7 @@ export function createCompanionMcpServer() {
     {
       roundId: z.string().optional().describe("Defaults to the active adventure round."),
       adventureId: z.string().optional().describe("Defaults to enchanted-forest."),
+      accessCode: z.string().min(1).describe("The lilazul access code Laura gives you for this private adventure."),
     },
     async (input) => asToolText(goBackGraphicAdventure(input)),
   );

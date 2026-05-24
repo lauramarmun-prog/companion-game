@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -35,6 +35,7 @@ type AdventureRound = {
 };
 
 const DEFAULT_ADVENTURE_ID = "enchanted-forest";
+const DEFAULT_ACCESS_CODE_HASH = "def4edd6fca1020331b1b65c754195cca97a76997403c6431cfa4aa1e5de33c0";
 const DEFAULT_FRONTEND_DIR = path.resolve(process.cwd(), "..", "Companion Games");
 const DEFAULT_STATE_FILE = path.join(
   process.env.LOCALAPPDATA || os.tmpdir(),
@@ -53,6 +54,25 @@ function getFrontendDir() {
 
 function getStateFile() {
   return process.env.COMPANION_GAMES_STATE_FILE || DEFAULT_STATE_FILE;
+}
+
+function getAccessCodeHash() {
+  return process.env.COMPANION_ADVENTURE_ACCESS_CODE_HASH || DEFAULT_ACCESS_CODE_HASH;
+}
+
+function hashAccessCode(accessCode: string) {
+  return createHash("sha256").update(accessCode.trim()).digest("hex");
+}
+
+function assertAdventureAccess(input: { adventureId?: string; accessCode?: string; accessCodeHash?: string }) {
+  const adventureId = input.adventureId || DEFAULT_ADVENTURE_ID;
+  if (adventureId !== DEFAULT_ADVENTURE_ID) return;
+
+  const expectedHash = getAccessCodeHash();
+  const submittedHash = input.accessCodeHash || (input.accessCode ? hashAccessCode(input.accessCode) : "");
+  if (submittedHash !== expectedHash) {
+    throw new Error("The Enchanted Forest is locked. Provide the lilazul access code to play.");
+  }
 }
 
 function loadState() {
@@ -189,7 +209,10 @@ export function startGraphicAdventureRound(input: {
   playerName?: string;
   companionName?: string;
   sceneId?: string;
+  accessCode?: string;
+  accessCodeHash?: string;
 } = {}) {
+  assertAdventureAccess(input);
   loadState();
 
   const adventureId = input.adventureId || DEFAULT_ADVENTURE_ID;
@@ -213,7 +236,13 @@ export function startGraphicAdventureRound(input: {
   return formatStatus(round);
 }
 
-export function getGraphicAdventureStatus(input: { roundId?: string; adventureId?: string } = {}) {
+export function getGraphicAdventureStatus(input: {
+  roundId?: string;
+  adventureId?: string;
+  accessCode?: string;
+  accessCodeHash?: string;
+} = {}) {
+  assertAdventureAccess(input);
   return formatStatus(resolveRound(input.roundId, input.adventureId || DEFAULT_ADVENTURE_ID));
 }
 
@@ -222,7 +251,10 @@ export function chooseGraphicAdventureOption(input: {
   adventureId?: string;
   choiceIndex?: number;
   choiceLabel?: string;
+  accessCode?: string;
+  accessCodeHash?: string;
 }) {
+  assertAdventureAccess(input);
   const round = resolveRound(input.roundId, input.adventureId || DEFAULT_ADVENTURE_ID);
   const status = formatStatus(round);
   const choice =
@@ -248,7 +280,13 @@ export function chooseGraphicAdventureOption(input: {
   };
 }
 
-export function goBackGraphicAdventure(input: { roundId?: string; adventureId?: string } = {}) {
+export function goBackGraphicAdventure(input: {
+  roundId?: string;
+  adventureId?: string;
+  accessCode?: string;
+  accessCodeHash?: string;
+} = {}) {
+  assertAdventureAccess(input);
   const round = resolveRound(input.roundId, input.adventureId || DEFAULT_ADVENTURE_ID);
   const previousScene = round.history.pop();
   if (!previousScene) throw new Error("There is no previous scene to return to.");
