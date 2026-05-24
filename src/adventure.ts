@@ -31,6 +31,7 @@ type AdventureRound = {
   history: string[];
   playerName: string;
   companionName: string;
+  accessGranted: boolean;
   updatedAt: string;
 };
 
@@ -167,6 +168,9 @@ function resolveRound(roundId?: string, adventureId = DEFAULT_ADVENTURE_ID) {
 
   const round = rounds.get(id);
   if (!round) throw new Error(`Unknown graphic adventure round: ${id}`);
+  if (round.adventureId === DEFAULT_ADVENTURE_ID && !round.accessGranted) {
+    throw new Error("The Enchanted Forest is locked. Start a round with the lilazul access code first.");
+  }
   return round;
 }
 
@@ -227,6 +231,7 @@ export function startGraphicAdventureRound(input: {
     history: [],
     playerName: input.playerName || "Laura",
     companionName: input.companionName || "AI companion",
+    accessGranted: true,
     updatedAt: new Date().toISOString(),
   };
 
@@ -239,10 +244,7 @@ export function startGraphicAdventureRound(input: {
 export function getGraphicAdventureStatus(input: {
   roundId?: string;
   adventureId?: string;
-  accessCode?: string;
-  accessCodeHash?: string;
 } = {}) {
-  assertAdventureAccess(input);
   return formatStatus(resolveRound(input.roundId, input.adventureId || DEFAULT_ADVENTURE_ID));
 }
 
@@ -251,10 +253,7 @@ export function chooseGraphicAdventureOption(input: {
   adventureId?: string;
   choiceIndex?: number;
   choiceLabel?: string;
-  accessCode?: string;
-  accessCodeHash?: string;
 }) {
-  assertAdventureAccess(input);
   const round = resolveRound(input.roundId, input.adventureId || DEFAULT_ADVENTURE_ID);
   const status = formatStatus(round);
   const choice =
@@ -283,10 +282,7 @@ export function chooseGraphicAdventureOption(input: {
 export function goBackGraphicAdventure(input: {
   roundId?: string;
   adventureId?: string;
-  accessCode?: string;
-  accessCodeHash?: string;
 } = {}) {
-  assertAdventureAccess(input);
   const round = resolveRound(input.roundId, input.adventureId || DEFAULT_ADVENTURE_ID);
   const previousScene = round.history.pop();
   if (!previousScene) throw new Error("There is no previous scene to return to.");

@@ -711,7 +711,7 @@ app.get("/api/adventures/:adventureId/status", (req, res) => {
   try {
     res.json({
       ok: true,
-      status: getGraphicAdventureStatus({ adventureId: req.params["adventureId"], ...readAdventureAccess(req) }),
+      status: getGraphicAdventureStatus({ adventureId: req.params["adventureId"] }),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
@@ -731,7 +731,6 @@ app.get("/api/adventures/:adventureId/status/:roundId", (req, res) => {
       status: getGraphicAdventureStatus({
         adventureId: req.params["adventureId"],
         roundId: req.params["roundId"],
-        ...readAdventureAccess(req),
       }),
     });
   } catch (error) {
@@ -741,20 +740,12 @@ app.get("/api/adventures/:adventureId/status/:roundId", (req, res) => {
 
 app.post("/api/adventures/:adventureId/choice", (req, res) => {
   try {
-    const body = req.body as {
-      roundId?: string;
-      choiceIndex?: number;
-      choiceLabel?: string;
-      accessCode?: string;
-      accessCodeHash?: string;
-    };
+    const body = req.body as { roundId?: string; choiceIndex?: number; choiceLabel?: string };
     const result = chooseGraphicAdventureOption({
       adventureId: req.params["adventureId"],
       roundId: body.roundId,
       choiceIndex: body.choiceIndex,
       choiceLabel: body.choiceLabel,
-      accessCode: body.accessCode,
-      accessCodeHash: body.accessCodeHash || readAdventureAccess(req).accessCodeHash,
     });
     res.json({ ok: true, result });
   } catch (error) {
@@ -764,12 +755,10 @@ app.post("/api/adventures/:adventureId/choice", (req, res) => {
 
 app.post("/api/adventures/:adventureId/back", (req, res) => {
   try {
-    const body = req.body as { roundId?: string; accessCode?: string; accessCodeHash?: string };
+    const body = req.body as { roundId?: string };
     const status = goBackGraphicAdventure({
       adventureId: req.params["adventureId"],
       roundId: body.roundId,
-      accessCode: body.accessCode,
-      accessCodeHash: body.accessCodeHash || readAdventureAccess(req).accessCodeHash,
     });
     res.json({ ok: true, status });
   } catch (error) {
