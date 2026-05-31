@@ -92,23 +92,6 @@ function sendApiError(res: Response, error: unknown) {
   res.status(400).json({ ok: false, error: message });
 }
 
-function readAdventureAccess(req: Request) {
-  return {
-    accessCode:
-      typeof req.headers["x-companion-adventure-code"] === "string"
-        ? req.headers["x-companion-adventure-code"]
-        : typeof req.query["accessCode"] === "string"
-          ? req.query["accessCode"]
-          : undefined,
-    accessCodeHash:
-      typeof req.headers["x-companion-adventure-code-hash"] === "string"
-        ? req.headers["x-companion-adventure-code-hash"]
-        : typeof req.query["accessCodeHash"] === "string"
-          ? req.query["accessCodeHash"]
-          : undefined,
-  };
-}
-
 app.get("/", (_req, res) => {
   res.json({
     ok: true,
@@ -690,16 +673,12 @@ app.post("/api/adventures/:adventureId/round", (req, res) => {
       playerName?: string;
       companionName?: string;
       sceneId?: string;
-      accessCode?: string;
-      accessCodeHash?: string;
     };
     const status = startGraphicAdventureRound({
       adventureId: req.params["adventureId"],
       playerName: body.playerName,
       companionName: body.companionName,
       sceneId: body.sceneId,
-      accessCode: body.accessCode,
-      accessCodeHash: body.accessCodeHash || readAdventureAccess(req).accessCodeHash,
     });
     res.json({ ok: true, status });
   } catch (error) {

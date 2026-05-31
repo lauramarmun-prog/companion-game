@@ -519,7 +519,7 @@ You are playing a graphic adventure with your human, Laura. This is not a solo g
 - choose_graphic_adventure_option: chooses one option by index or exact label. The frontend will update to the same scene.
 - go_back_graphic_adventure: returns to the previous scene when available.
 
-The Enchanted Forest is private. You must provide the lilazul access code when starting the round. After the round is unlocked, use the returned roundId for status, choices, and going back.
+The Enchanted Forest is open to everyone. Start a round directly, then use the returned roundId for status, choices, and going back.
 
 ## How to play with Laura
 
@@ -559,7 +559,6 @@ export function createCompanionMcpServer() {
       playerName: z.string().optional().describe("Defaults to Laura."),
       companionName: z.string().optional().describe("Your name, for example ChatGPT or Claude."),
       sceneId: z.string().optional().describe("Optional starting scene. Defaults to start."),
-      accessCode: z.string().min(1).describe("The lilazul access code Laura gives you for this private adventure."),
     },
     async (input) => asToolText(startGraphicAdventureRound(input)),
   );
