@@ -3,7 +3,7 @@ Wall time: 1.9 seconds
 Output:
 # Companion Games MCP
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/X4zHe2?utm_medium=integration&utm_source=template&utm_campaign=companion-games-mcp)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/companion-games-mcp?utm_medium=integration&utm_source=template&utm_campaign=companion-games-mcp)
 
 A self-hosted MCP server that lets a person and an AI companion play conversational games together. Each Railway deployment is isolated and includes Hangman, Tic-Tac-Toe, Quiz, Word Quest, Hidden Fleet, Hidden Fleet Short, Who is it?, and The Enchanted Forest graphic adventure.
 
