@@ -1,6 +1,29 @@
-# MCP Companion Game
+Exit code: 0
+Wall time: 1.9 seconds
+Output:
+# Companion Games MCP
 
-Small MCP server for Companion Games.
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/X4zHe2?utm_medium=integration&utm_source=template&utm_campaign=companion-games-mcp)
+
+A self-hosted MCP server that lets a person and an AI companion play conversational games together. Each Railway deployment is isolated and includes Hangman, Tic-Tac-Toe, Quiz, Word Quest, Hidden Fleet, Hidden Fleet Short, Who is it?, and The Enchanted Forest graphic adventure.
+
+## Deploy on Railway
+
+The Railway template configures HTTPS networking, a health check, persistent adventure storage, and a private MCP path. It does not require an AI provider key or a Companion Games account.
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `MCP_PATH_SECRET` | Generated automatically | Protects the private ChatGPT MCP URL |
+| `COMPANION_GAMES_STATE_FILE` | Preconfigured | Stores graphic-adventure progress on the Railway volume |
+| `FRONTEND_ORIGIN` | No | Optional comma-separated CORS allowlist for a separate web frontend |
+
+After deployment, connect ChatGPT to:
+
+```text
+https://YOUR-RAILWAY-DOMAIN/YOUR-MCP_PATH_SECRET/mcp
+```
+
+Keep the full URL private. The template generates the secret automatically, so the person deploying it does not need to invent one.
 
 The first pilot game is Hangman. Word Quest, Quiz, Tic-Tac-Toe, Hidden Fleet, Hidden Fleet Short, and Who is it? are also available. The important rule is that public status does not return private secret words or secret characters while a round is still playing.
 
@@ -70,7 +93,7 @@ For production, rounds where the AI guesses should be created by the private web
 Railway should run the HTTP backend:
 
 - API base: `/api`
-- MCP endpoint: `/mcp`
+- MCP endpoint: `/:MCP_PATH_SECRET/mcp` on Railway, or `/mcp` locally when no secret is configured
 - Healthcheck: `/health`
 
 Useful API calls:
@@ -117,6 +140,8 @@ npm run smoke
 npm run dev:http
 ```
 
+Copy [`.env.example`](./.env.example) to `.env` when you want to exercise the optional production settings locally.
+
 For local stdio MCP testing:
 
 ```bash
@@ -129,3 +154,10 @@ Railway deploy uses:
 npm run build
 npm start
 ```
+
+## Privacy and security
+
+Game rounds live only inside the deployed instance. Most game state is held in process memory and resets when the service restarts; graphic-adventure progress can persist on the attached Railway volume. Public status tools deliberately hide secret words, ship positions, and secret characters while a round is active.
+
+Do not expose the complete private MCP URL. If it leaks, generate a new `MCP_PATH_SECRET` in Railway and reconnect ChatGPT. See [`SECURITY.md`](./SECURITY.md) for reporting security issues.
+

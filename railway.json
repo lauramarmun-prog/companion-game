@@ -1,8 +1,11 @@
+Exit code: 0
+Wall time: 2.2 seconds
+Output:
 {
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS",
-    "buildCommand": "npm install && npm run build"
+    "builder": "RAILPACK",
+    "buildCommand": "npm ci && npm run build"
   },
   "deploy": {
     "startCommand": "npm start",
@@ -10,3 +13,4 @@
     "healthcheckTimeout": 100
   }
 }
+

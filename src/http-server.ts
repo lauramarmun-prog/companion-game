@@ -1,3 +1,6 @@
+Exit code: 0
+Wall time: 2.2 seconds
+Output:
 import { randomUUID } from "node:crypto";
 import cors from "cors";
 import express, { type Request, type Response } from "express";
@@ -56,6 +59,13 @@ import { getWordlyStatus, startWordlyRound, submitWordlyGuess, type WordlyTurn }
 
 const port = Number(process.env.PORT ?? 3000);
 const allowedOrigin = process.env.FRONTEND_ORIGIN ?? "*";
+const mcpPathSecret = process.env.MCP_PATH_SECRET?.trim() || undefined;
+
+if (mcpPathSecret && !/^[A-Za-z0-9_-]{24,128}$/.test(mcpPathSecret)) {
+  throw new Error("MCP_PATH_SECRET must contain 24-128 URL-safe characters (letters, numbers, _ or -).");
+}
+
+const mcpPath = mcpPathSecret ? `/${mcpPathSecret}/mcp` : "/mcp";
 
 const app = createMcpExpressApp({ host: "0.0.0.0" });
 
@@ -85,7 +95,7 @@ app.use(
     },
   }),
 );
-app.use(express.json());
+app.use(express.json({ limit: "64kb" }));
 
 function sendApiError(res: Response, error: unknown) {
   const message = error instanceof Error ? error.message : "Unknown error";
@@ -110,7 +120,7 @@ app.get("/", (_req, res) => {
       "graphic-adventures",
       "empty-status-ok",
     ],
-    mcp: "/mcp",
+    mcp: mcpPathSecret ? "Private MCP path configured" : mcpPath,
     api: {
       health: "/health",
       startHangmanRound: "POST /api/hangman/round",
@@ -802,9 +812,9 @@ async function handleMcpGetOrDelete(req: Request, res: Response) {
   await transports[sessionId].handleRequest(req, res);
 }
 
-app.post("/mcp", handleMcpPost);
-app.get("/mcp", handleMcpGetOrDelete);
-app.delete("/mcp", handleMcpGetOrDelete);
+app.post(mcpPath, handleMcpPost);
+app.get(mcpPath, handleMcpGetOrDelete);
+app.delete(mcpPath, handleMcpGetOrDelete);
 
 const httpServer = app.listen(port, "0.0.0.0", () => {
   console.log(`Companion Games backend listening on port ${port}`);
@@ -820,3 +830,4 @@ async function shutdown() {
 
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
+

@@ -1,3 +1,6 @@
+Exit code: 0
+Wall time: 2.3 seconds
+Output:
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
@@ -180,8 +183,7 @@ function formatStatus(round: AdventureRound) {
     canGoBack: round.history.length > 0,
     historyDepth: round.history.length,
     updatedAt: round.updatedAt,
-    companionInstructions:
-      "You are playing this adventure with your human, Laura. Talk with her warmly before choosing. Discuss where you both want to go, make the decision feel shared, and never treat the game like a solo automation. When you choose, use one of the available option indexes or labels.",
+    companionInstructions: `You are playing this adventure with ${round.playerName}. Talk with them warmly before choosing. Discuss where you both want to go, make the decision feel shared, and never treat the game like a solo automation. When you choose, use one of the available option indexes or labels.`,
   };
 }
 
@@ -203,7 +205,7 @@ export function startGraphicAdventureRound(input: {
     adventureId,
     currentScene: sceneId,
     history: [],
-    playerName: input.playerName || "Laura",
+    playerName: input.playerName || "Player",
     companionName: input.companionName || "AI companion",
     accessGranted: true,
     updatedAt: new Date().toISOString(),
@@ -266,3 +268,4 @@ export function goBackGraphicAdventure(input: {
   saveState();
   return formatStatus(round);
 }
+

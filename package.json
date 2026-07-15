@@ -1,16 +1,24 @@
+Exit code: 0
+Wall time: 2.3 seconds
+Output:
 {
   "name": "mcp-companion-game",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "dev": "tsx src/server.ts",
-    "dev:http": "tsx src/http-server.ts",
+    "dev": "node --env-file-if-exists=.env --import tsx src/server.ts",
+    "dev:http": "node --env-file-if-exists=.env --import tsx src/http-server.ts",
     "build": "tsc",
     "start": "node dist/http-server.js",
     "start:stdio": "node dist/server.js",
     "check": "tsc --noEmit",
-    "smoke": "tsx src/smoke-test.ts"
+    "smoke": "tsx src/smoke-test.ts",
+    "smoke:http": "npm run build && node tests/http-smoke.mjs",
+    "test": "npm run check && npm run smoke && npm run smoke:http"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
@@ -22,7 +30,8 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^20.17.30",
-    "tsx": "^4.19.3",
+    "tsx": "^4.23.1",
     "typescript": "^5.8.3"
   }
 }
+

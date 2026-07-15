@@ -1,6 +1,11 @@
+Exit code: 0
+Wall time: 1.9 seconds
+Output:
 node_modules/
 dist/
 .env
 .env.*
+!.env.example
 npm-debug.log*
 .DS_Store
+
