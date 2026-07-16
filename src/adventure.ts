@@ -1,11 +1,9 @@
-Exit code: 0
-Wall time: 2.3 seconds
-Output:
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { forestScenesData } from "./adventureData.js";
+import { houseScenesData } from "./houseAdventureData.js";
 
 type AdventureChoice = {
   label: string;
@@ -18,6 +16,15 @@ type AdventureScene = {
   title: string;
   text: string;
   image?: string;
+  setFlags?: Record<string, boolean>;
+  variants?: Array<{
+    flags?: Record<string, boolean>;
+    eyebrow?: string;
+    title?: string;
+    text?: string;
+    image?: string;
+    choices?: AdventureChoice[];
+  }>;
   choices: AdventureChoice[];
 };
 
@@ -35,10 +42,14 @@ type AdventureRound = {
   playerName: string;
   companionName: string;
   accessGranted: boolean;
+  flags: Record<string, boolean>;
   updatedAt: string;
 };
 
 const DEFAULT_ADVENTURE_ID = "enchanted-forest";
+const HOUSE_ADVENTURE_ID = "house-that-whispers";
+const HOUSE_ACCESS_CODE_HASH =
+  process.env.HOUSE_OF_WHISPERS_ACCESS_CODE_HASH || "a9faa02483e14d525e33a0aa5b8674f17237afbf0e6d47b0070e4c44873055c3";
 const DEFAULT_FRONTEND_DIR = path.resolve(process.cwd(), "..", "Companion Games");
 const DEFAULT_STATE_FILE = path.join(
   process.env.LOCALAPPDATA || os.tmpdir(),
@@ -48,6 +59,7 @@ const DEFAULT_STATE_FILE = path.join(
 
 const rounds = new Map<string, AdventureRound>();
 const activeRounds = new Map<string, string>();
+const licenses = new Map<string, { activatedAt: string }>();
 
 let cachedAdventures: Record<string, AdventureDefinition> | null = null;
 
@@ -66,17 +78,24 @@ function loadState() {
   const parsed = JSON.parse(readFileSync(stateFile, "utf8")) as {
     rounds?: AdventureRound[];
     activeRounds?: Record<string, string>;
+    licenses?: Record<string, { activatedAt: string }>;
   };
 
   rounds.clear();
   activeRounds.clear();
+  licenses.clear();
 
   for (const round of parsed.rounds || []) {
+    round.flags ||= {};
     rounds.set(round.id, round);
   }
 
   for (const [adventureId, roundId] of Object.entries(parsed.activeRounds || {})) {
     activeRounds.set(adventureId, roundId);
+  }
+
+  for (const [adventureId, license] of Object.entries(parsed.licenses || {})) {
+    licenses.set(adventureId, license);
   }
 }
 
@@ -89,6 +108,7 @@ function saveState() {
       {
         rounds: Array.from(rounds.values()),
         activeRounds: Object.fromEntries(activeRounds),
+        licenses: Object.fromEntries(licenses),
       },
       null,
       2,
@@ -96,20 +116,24 @@ function saveState() {
   );
 }
 
-function loadForestScenes() {
+function loadScenes(
+  sceneVariable: "forestScenes" | "houseScenes",
+  fallback: Record<string, AdventureScene>,
+) {
   const adventureJsPath = path.join(getFrontendDir(), "adventure.js");
   if (!existsSync(adventureJsPath)) {
-    return forestScenesData as unknown as Record<string, AdventureScene>;
+    return fallback;
   }
 
   const source = readFileSync(adventureJsPath, "utf8");
-  const startMarker = "const forestScenes = ";
-  const endMarker = "\n};\n\nconst adventures";
+  const startMarker = `const ${sceneVariable} = `;
+  const nextMarker =
+    sceneVariable === "forestScenes" ? "\n};\n\nconst houseScenes" : "\n};\n\nconst adventures";
   const start = source.indexOf(startMarker);
-  const end = source.indexOf(endMarker, start);
+  const end = source.indexOf(nextMarker, start);
 
   if (start === -1 || end === -1) {
-    throw new Error("Could not read forest scenes from adventure.js.");
+    return fallback;
   }
 
   const objectLiteral = `${source.slice(start + startMarker.length, end)}\n}`;
@@ -124,17 +148,49 @@ function loadForestScenes() {
 
 function getAdventures() {
   if (!cachedAdventures) {
-    const forestScenes = loadForestScenes();
+    const forestScenes = loadScenes(
+      "forestScenes",
+      forestScenesData as unknown as Record<string, AdventureScene>,
+    );
+    const houseScenes = loadScenes(
+      "houseScenes",
+      houseScenesData as unknown as Record<string, AdventureScene>,
+    );
     cachedAdventures = {
       [DEFAULT_ADVENTURE_ID]: {
         title: "The Enchanted Forest",
         cover: "./assets/adventures/The enchanted Forest/cover-web.jpg",
         scenes: forestScenes,
       },
+      [HOUSE_ADVENTURE_ID]: {
+        title: "The House That Whispers",
+        cover: "./assets/adventures/The house that whispers/cover-web.png",
+        scenes: houseScenes,
+      },
     };
   }
 
   return cachedAdventures;
+}
+
+function isAdventureUnlocked(adventureId: string) {
+  return adventureId !== HOUSE_ADVENTURE_ID || licenses.has(adventureId);
+}
+
+function requireAdventureAccess(adventureId: string) {
+  if (!isAdventureUnlocked(adventureId)) {
+    throw new Error(
+      "The House That Whispers requires a paid access code. Ask your human for the Ko-fi code, then call activate_graphic_adventure once before starting the game.",
+    );
+  }
+}
+
+function resolveScene(scene: AdventureScene, flags: Record<string, boolean>) {
+  const variant = scene.variants?.find((candidate) =>
+    Object.entries(candidate.flags || {}).every(([key, value]) => flags[key] === value),
+  );
+
+  return variant ? { ...scene, ...variant } : scene;
 }
 
 function getAdventure(adventureId = DEFAULT_ADVENTURE_ID) {
@@ -155,8 +211,10 @@ function resolveRound(roundId?: string, adventureId = DEFAULT_ADVENTURE_ID) {
 }
 
 function formatStatus(round: AdventureRound) {
+  requireAdventureAccess(round.adventureId);
   const adventure = getAdventure(round.adventureId);
-  const scene = adventure.scenes[round.currentScene] || adventure.scenes["start"];
+  const baseScene = adventure.scenes[round.currentScene] || adventure.scenes["start"];
+  const scene = baseScene ? resolveScene(baseScene, round.flags) : undefined;
   if (!scene) throw new Error(`Adventure ${round.adventureId} has no start scene.`);
 
   const choices = scene.choices.map((choice, index) => ({
@@ -196,6 +254,7 @@ export function startGraphicAdventureRound(input: {
   loadState();
 
   const adventureId = input.adventureId || DEFAULT_ADVENTURE_ID;
+  requireAdventureAccess(adventureId);
   const adventure = getAdventure(adventureId);
   const sceneId = input.sceneId || "start";
   if (!adventure.scenes[sceneId]) throw new Error(`Unknown scene: ${sceneId}`);
@@ -208,6 +267,7 @@ export function startGraphicAdventureRound(input: {
     playerName: input.playerName || "Player",
     companionName: input.companionName || "AI companion",
     accessGranted: true,
+    flags: {},
     updatedAt: new Date().toISOString(),
   };
 
@@ -240,13 +300,18 @@ export function chooseGraphicAdventureOption(input: {
   if (!choice) throw new Error("Choose a valid option index or exact option label.");
   if (!choice.next) throw new Error("That option opens a link and cannot be played through the MCP.");
 
-  if (choice.next === "start") {
+  if (choice.next === "start" || choice.next === "awakening") {
     round.history = [];
+    round.flags = {};
   } else {
     round.history.push(round.currentScene);
   }
 
   round.currentScene = choice.next;
+  const nextScene = getAdventure(round.adventureId).scenes[round.currentScene];
+  if (nextScene?.setFlags) {
+    round.flags = { ...round.flags, ...nextScene.setFlags };
+  }
   round.updatedAt = new Date().toISOString();
   saveState();
   return {
@@ -267,5 +332,52 @@ export function goBackGraphicAdventure(input: {
   round.updatedAt = new Date().toISOString();
   saveState();
   return formatStatus(round);
+}
+
+export function getGraphicAdventureAccessStatus(input: { adventureId?: string } = {}) {
+  loadState();
+  const adventureId = input.adventureId || DEFAULT_ADVENTURE_ID;
+  getAdventure(adventureId);
+
+  return {
+    adventureId,
+    accessGranted: isAdventureUnlocked(adventureId),
+    requiresAccessCode: adventureId === HOUSE_ADVENTURE_ID,
+  };
+}
+
+export function activateGraphicAdventure(input: { adventureId?: string; accessCode: string }) {
+  loadState();
+  const adventureId = input.adventureId || HOUSE_ADVENTURE_ID;
+  getAdventure(adventureId);
+
+  if (adventureId !== HOUSE_ADVENTURE_ID || licenses.has(adventureId)) {
+    return {
+      adventureId,
+      accessGranted: true,
+      alreadyUnlocked: true,
+    };
+  }
+
+  const submittedHash = createHash("sha256")
+    .update(input.accessCode.trim().toUpperCase())
+    .digest();
+  const expectedHash = Buffer.from(HOUSE_ACCESS_CODE_HASH, "hex");
+
+  if (submittedHash.length !== expectedHash.length || !timingSafeEqual(submittedHash, expectedHash)) {
+    throw new Error("That access code is not valid.");
+  }
+
+  const activatedAt = new Date().toISOString();
+  licenses.set(adventureId, { activatedAt });
+  saveState();
+
+  return {
+    adventureId,
+    accessGranted: true,
+    alreadyUnlocked: false,
+    activatedAt,
+    message: "Access saved. You can now start The House That Whispers without entering the code again.",
+  };
 }
 

@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 1.9 seconds
-Output:
 # Companion Games MCP
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/companion-games-mcp?utm_medium=integration&utm_source=template&utm_campaign=companion-games-mcp)
@@ -26,6 +23,20 @@ https://YOUR-RAILWAY-DOMAIN/YOUR-MCP_PATH_SECRET/mcp
 Keep the full URL private. The template generates the secret automatically, so the person deploying it does not need to invent one.
 
 The first pilot game is Hangman. Word Quest, Quiz, Tic-Tac-Toe, Hidden Fleet, Hidden Fleet Short, and Who is it? are also available. The important rule is that public status does not return private secret words or secret characters while a round is still playing.
+
+## Graphic adventure tools
+
+- `graphic_adventure_how_to_play`: explains the shared adventure flow.
+- `get_graphic_adventure_access_status`: checks paid-adventure access.
+- `activate_graphic_adventure`: validates the Ko-fi code once and saves access.
+- `start_graphic_adventure_round`: starts The Enchanted Forest or The House That Whispers.
+- `get_graphic_adventure_status`: returns the current scene and choices.
+- `choose_graphic_adventure_option`: advances through one selected choice.
+- `go_back_graphic_adventure`: returns to the previous scene.
+
+The Enchanted Forest is open. The House That Whispers uses a shared paid access code. Only its SHA-256 hash is included in the repository; the plaintext code is never stored or returned by the server. An operator may replace the built-in hash with `HOUSE_OF_WHISPERS_ACCESS_CODE_HASH`.
+
+Successful activation is stored in the same local state file as adventure rounds. The Railway template's persistent volume keeps it across service restarts and deploys.
 
 ## Hangman tools
 
@@ -130,6 +141,12 @@ Useful API calls:
 - `GET /api/who-is-it/status`
 - `POST /api/who-is-it/secret`
 - `POST /api/who-is-it/guess`
+- `GET /api/adventures/:adventureId/access`
+- `POST /api/adventures/:adventureId/activate`
+- `POST /api/adventures/:adventureId/round`
+- `GET /api/adventures/:adventureId/status`
+- `POST /api/adventures/:adventureId/choice`
+- `POST /api/adventures/:adventureId/back`
 
 For local development:
 

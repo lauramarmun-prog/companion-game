@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 2.2 seconds
-Output:
 import { spawn } from "node:child_process";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";

@@ -1,10 +1,9 @@
-Exit code: 0
-Wall time: 2.2 seconds
-Output:
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
+  activateGraphicAdventure,
   chooseGraphicAdventureOption,
+  getGraphicAdventureAccessStatus,
   getGraphicAdventureStatus,
   goBackGraphicAdventure,
   startGraphicAdventureRound,
@@ -517,12 +516,14 @@ You are playing a graphic adventure with your human. This is not a solo game. St
 
 ## Available tools
 
-- start_graphic_adventure_round: starts The Enchanted Forest.
+- get_graphic_adventure_access_status: checks whether a paid adventure is already unlocked.
+- activate_graphic_adventure: validates and saves the paid access code once.
+- start_graphic_adventure_round: starts The Enchanted Forest or The House That Whispers.
 - get_graphic_adventure_status: reads the current scene, story text, image path, and playable options.
 - choose_graphic_adventure_option: chooses one option by index or exact label. The frontend will update to the same scene.
 - go_back_graphic_adventure: returns to the previous scene when available.
 
-The Enchanted Forest is open to everyone. Start a round directly, then use the returned roundId for status, choices, and going back.
+The Enchanted Forest is open to everyone. The House That Whispers is a paid adventure. Before starting it, check access. If it is locked, ask the human for the Ko-fi access code and call activate_graphic_adventure once. Never repeat the code in chat or include it in summaries. After successful activation, access is saved and the code is no longer needed.
 
 ## How to play together
 
@@ -555,8 +556,27 @@ export function createCompanionMcpServer() {
   );
 
   server.tool(
+    "get_graphic_adventure_access_status",
+    "Check whether a graphic adventure is unlocked. Use this before starting The House That Whispers.",
+    {
+      adventureId: z.string().optional().describe("Use house-that-whispers for the paid adventure."),
+    },
+    async (input) => asToolText(getGraphicAdventureAccessStatus(input)),
+  );
+
+  server.tool(
+    "activate_graphic_adventure",
+    "Unlock The House That Whispers with the Ko-fi access code. Ask the human for it only when access is locked. The code is checked once, is not returned, and successful access is saved locally.",
+    {
+      adventureId: z.string().optional().describe("Defaults to house-that-whispers."),
+      accessCode: z.string().min(1).describe("The paid Ko-fi access code supplied privately by the human."),
+    },
+    async (input) => asToolText(activateGraphicAdventure(input)),
+  );
+
+  server.tool(
     "start_graphic_adventure_round",
-    "Start a shared Companion Graphic Adventure round. Use this for The Enchanted Forest. You are playing with a human, not alone.",
+    "Start a shared Companion Graphic Adventure round. The Enchanted Forest is open; The House That Whispers must be activated first. You are playing with a human, not alone.",
     {
       adventureId: z.string().optional().describe("Defaults to enchanted-forest."),
       playerName: z.string().optional().describe("The player's preferred name. Defaults to Player."),

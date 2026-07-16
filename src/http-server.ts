@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 2.2 seconds
-Output:
 import { randomUUID } from "node:crypto";
 import cors from "cors";
 import express, { type Request, type Response } from "express";
@@ -8,7 +5,9 @@ import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import {
+  activateGraphicAdventure,
   chooseGraphicAdventureOption,
+  getGraphicAdventureAccessStatus,
   getGraphicAdventureStatus,
   goBackGraphicAdventure,
   startGraphicAdventureRound,
@@ -118,6 +117,7 @@ app.get("/", (_req, res) => {
       "hidden-fleet-short",
       "who-is-it",
       "graphic-adventures",
+      "house-that-whispers",
       "empty-status-ok",
     ],
     mcp: mcpPathSecret ? "Private MCP path configured" : mcpPath,
@@ -155,6 +155,8 @@ app.get("/", (_req, res) => {
       setWhoIsItSecret: "POST /api/who-is-it/secret",
       submitWhoIsItFinalGuess: "POST /api/who-is-it/guess",
       startGraphicAdventureRound: "POST /api/adventures/:adventureId/round",
+      getGraphicAdventureAccessStatus: "GET /api/adventures/:adventureId/access",
+      activateGraphicAdventure: "POST /api/adventures/:adventureId/activate",
       getGraphicAdventureStatus: "GET /api/adventures/:adventureId/status/:roundId?",
       chooseGraphicAdventureOption: "POST /api/adventures/:adventureId/choice",
       goBackGraphicAdventure: "POST /api/adventures/:adventureId/back",
@@ -689,6 +691,30 @@ app.post("/api/adventures/:adventureId/round", (req, res) => {
       playerName: body.playerName,
       companionName: body.companionName,
       sceneId: body.sceneId,
+    });
+    res.json({ ok: true, status });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.get("/api/adventures/:adventureId/access", (req, res) => {
+  try {
+    const status = getGraphicAdventureAccessStatus({
+      adventureId: req.params["adventureId"],
+    });
+    res.json({ ok: true, status });
+  } catch (error) {
+    sendApiError(res, error);
+  }
+});
+
+app.post("/api/adventures/:adventureId/activate", (req, res) => {
+  try {
+    const body = req.body as { accessCode?: string };
+    const status = activateGraphicAdventure({
+      adventureId: req.params["adventureId"],
+      accessCode: body.accessCode ?? "",
     });
     res.json({ ok: true, status });
   } catch (error) {
