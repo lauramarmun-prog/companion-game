@@ -9,12 +9,17 @@ type AdventureChoice = {
   label: string;
   next?: string;
   href?: string;
+  requiresFlags?: Record<string, boolean>;
+  requiresAnyFlags?: string[];
+  hideWhenFlags?: Record<string, boolean>;
+  hideWhenAnyFlags?: string[];
 };
 
 type AdventureScene = {
   eyebrow: string;
   title: string;
   text: string;
+  hubText?: string;
   image?: string;
   setFlags?: Record<string, boolean>;
   variants?: Array<{
@@ -25,7 +30,18 @@ type AdventureScene = {
     image?: string;
     choices?: AdventureChoice[];
   }>;
+  textRules?: Array<{
+    whenMissingFlags?: string[];
+    applyWhenFlags?: string[];
+    find: string;
+    replace: string;
+  }>;
   choices: AdventureChoice[];
+};
+
+type AdventureHistoryEntry = {
+  sceneId: string;
+  flags: Record<string, boolean>;
 };
 
 type AdventureDefinition = {
@@ -38,7 +54,7 @@ type AdventureRound = {
   id: string;
   adventureId: string;
   currentScene: string;
-  history: string[];
+  history: AdventureHistoryEntry[];
   playerName: string;
   companionName: string;
   accessGranted: boolean;
@@ -87,6 +103,9 @@ function loadState() {
 
   for (const round of parsed.rounds || []) {
     round.flags ||= {};
+    round.history = (round.history || []).map((entry) =>
+      typeof entry === "string" ? { sceneId: entry, flags: { ...round.flags } } : entry,
+    );
     rounds.set(round.id, round);
   }
 
@@ -190,7 +209,33 @@ function resolveScene(scene: AdventureScene, flags: Record<string, boolean>) {
     Object.entries(candidate.flags || {}).every(([key, value]) => flags[key] === value),
   );
 
-  return variant ? { ...scene, ...variant } : scene;
+  const resolvedScene = variant ? { ...scene, ...variant } : scene;
+  const text = (resolvedScene.textRules || []).reduce((currentText, rule) => {
+    const missingFlagCondition =
+      !rule.whenMissingFlags?.length || rule.whenMissingFlags.some((flag) => !flags[flag]);
+    const requiredFlagCondition =
+      !rule.applyWhenFlags?.length || rule.applyWhenFlags.every((flag) => Boolean(flags[flag]));
+
+    return missingFlagCondition && requiredFlagCondition
+      ? currentText.replace(rule.find, rule.replace)
+      : currentText;
+  }, resolvedScene.hubText || resolvedScene.text);
+
+  return { ...resolvedScene, text };
+}
+
+function choiceMatchesFlags(choice: AdventureChoice, flags: Record<string, boolean>) {
+  const hasRequiredFlags = Object.entries(choice.requiresFlags || {}).every(
+    ([key, value]) => flags[key] === value,
+  );
+  const hasAnyRequiredFlag =
+    !choice.requiresAnyFlags?.length || choice.requiresAnyFlags.some((key) => Boolean(flags[key]));
+  const hiddenByAllFlags =
+    Object.keys(choice.hideWhenFlags || {}).length > 0 &&
+    Object.entries(choice.hideWhenFlags || {}).every(([key, value]) => flags[key] === value);
+  const hiddenByAnyFlag = (choice.hideWhenAnyFlags || []).some((key) => Boolean(flags[key]));
+
+  return hasRequiredFlags && hasAnyRequiredFlag && !hiddenByAllFlags && !hiddenByAnyFlag;
 }
 
 function getAdventure(adventureId = DEFAULT_ADVENTURE_ID) {
@@ -217,13 +262,16 @@ function formatStatus(round: AdventureRound) {
   const scene = baseScene ? resolveScene(baseScene, round.flags) : undefined;
   if (!scene) throw new Error(`Adventure ${round.adventureId} has no start scene.`);
 
-  const choices = scene.choices.map((choice, index) => ({
-    index,
-    label: choice.label,
-    next: choice.next ?? null,
-    href: choice.href ?? null,
-    isPlayable: Boolean(choice.next),
-  }));
+  const choices = scene.choices
+    .map((choice, index) => ({ ...choice, index }))
+    .filter((choice) => choiceMatchesFlags(choice, round.flags))
+    .map((choice) => ({
+      index: choice.index,
+      label: choice.label,
+      next: choice.next ?? null,
+      href: choice.href ?? null,
+      isPlayable: Boolean(choice.next),
+    }));
 
   return {
     type: "graphic-adventure",
@@ -240,6 +288,7 @@ function formatStatus(round: AdventureRound) {
     choices,
     canGoBack: round.history.length > 0,
     historyDepth: round.history.length,
+    flags: round.flags,
     updatedAt: round.updatedAt,
     companionInstructions: `You are playing this adventure with ${round.playerName}. Talk with them warmly before choosing. Discuss where you both want to go, make the decision feel shared, and never treat the game like a solo automation. When you choose, use one of the available option indexes or labels.`,
   };
@@ -294,7 +343,7 @@ export function chooseGraphicAdventureOption(input: {
   const status = formatStatus(round);
   const choice =
     typeof input.choiceIndex === "number"
-      ? status.choices[input.choiceIndex]
+      ? status.choices.find((candidate) => candidate.index === input.choiceIndex)
       : status.choices.find((candidate) => candidate.label.toLowerCase() === input.choiceLabel?.toLowerCase());
 
   if (!choice) throw new Error("Choose a valid option index or exact option label.");
@@ -304,7 +353,7 @@ export function chooseGraphicAdventureOption(input: {
     round.history = [];
     round.flags = {};
   } else {
-    round.history.push(round.currentScene);
+    round.history.push({ sceneId: round.currentScene, flags: { ...round.flags } });
   }
 
   round.currentScene = choice.next;
@@ -325,10 +374,11 @@ export function goBackGraphicAdventure(input: {
   adventureId?: string;
 } = {}) {
   const round = resolveRound(input.roundId, input.adventureId || DEFAULT_ADVENTURE_ID);
-  const previousScene = round.history.pop();
-  if (!previousScene) throw new Error("There is no previous scene to return to.");
+  const previous = round.history.pop();
+  if (!previous) throw new Error("There is no previous scene to return to.");
 
-  round.currentScene = previousScene;
+  round.currentScene = previous.sceneId;
+  round.flags = { ...previous.flags };
   round.updatedAt = new Date().toISOString();
   saveState();
   return formatStatus(round);
