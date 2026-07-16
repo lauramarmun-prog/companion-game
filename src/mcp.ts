@@ -517,13 +517,13 @@ You are playing a graphic adventure with your human. This is not a solo game. St
 ## Available tools
 
 - get_graphic_adventure_access_status: checks whether a paid adventure is already unlocked.
-- activate_graphic_adventure: validates and saves the paid access code once.
+- activate_graphic_adventure: validates and saves the paid access code once in this private deployment.
 - start_graphic_adventure_round: starts The Enchanted Forest or The House That Whispers.
 - get_graphic_adventure_status: reads the current scene, story text, image path, and playable options.
 - choose_graphic_adventure_option: chooses one option by index or exact label. The frontend will update to the same scene.
 - go_back_graphic_adventure: returns to the previous scene when available.
 
-The Enchanted Forest is open to everyone. The House That Whispers is a paid adventure. Before starting it, check access. If it is locked, ask the human for the Ko-fi access code and call activate_graphic_adventure once. Never repeat the code in chat or include it in summaries. After successful activation, access is saved and the code is no longer needed.
+The Enchanted Forest is open to everyone. The House That Whispers is a paid adventure. Before starting it, check access. If it is locked, ask the human for the Ko-fi access code and call activate_graphic_adventure once. Never repeat the code in chat or include it in summaries. After successful activation, access is saved only in this person's private deployment and the code is no longer needed.
 
 ## How to play together
 
@@ -566,7 +566,7 @@ export function createCompanionMcpServer() {
 
   server.tool(
     "activate_graphic_adventure",
-    "Unlock The House That Whispers with the Ko-fi access code. Ask the human for it only when access is locked. The code is checked once, is not returned, and successful access is saved locally.",
+    "Unlock The House That Whispers in this person's private deployment with the Ko-fi access code. Ask the human for it only when access is locked. The code is checked once, is not returned, and never unlocks another person's deployment.",
     {
       adventureId: z.string().optional().describe("Defaults to house-that-whispers."),
       accessCode: z.string().min(1).describe("The paid Ko-fi access code supplied privately by the human."),

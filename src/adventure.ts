@@ -92,6 +92,7 @@ function loadState() {
   if (!existsSync(stateFile)) return;
 
   const parsed = JSON.parse(readFileSync(stateFile, "utf8")) as {
+    licenseVersion?: number;
     rounds?: AdventureRound[];
     activeRounds?: Record<string, string>;
     licenses?: Record<string, { activatedAt: string }>;
@@ -113,8 +114,12 @@ function loadState() {
     activeRounds.set(adventureId, roundId);
   }
 
-  for (const [adventureId, license] of Object.entries(parsed.licenses || {})) {
-    licenses.set(adventureId, license);
+  // Version 1 included a test activation in the template owner's deployment.
+  // Ignore those licenses once so every isolated deployment starts locked.
+  if (parsed.licenseVersion === 2) {
+    for (const [adventureId, license] of Object.entries(parsed.licenses || {})) {
+      licenses.set(adventureId, license);
+    }
   }
 }
 
@@ -125,6 +130,7 @@ function saveState() {
     stateFile,
     JSON.stringify(
       {
+        licenseVersion: 2,
         rounds: Array.from(rounds.values()),
         activeRounds: Object.fromEntries(activeRounds),
         licenses: Object.fromEntries(licenses),

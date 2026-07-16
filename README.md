@@ -28,13 +28,13 @@ The first pilot game is Hangman. Word Quest, Quiz, Tic-Tac-Toe, Hidden Fleet, Hi
 
 - `graphic_adventure_how_to_play`: explains the shared adventure flow.
 - `get_graphic_adventure_access_status`: checks paid-adventure access.
-- `activate_graphic_adventure`: validates the Ko-fi code once and saves access.
+- `activate_graphic_adventure`: validates the Ko-fi code once and saves access only in that person's private deployment.
 - `start_graphic_adventure_round`: starts The Enchanted Forest or The House That Whispers.
 - `get_graphic_adventure_status`: returns the current scene and choices.
 - `choose_graphic_adventure_option`: advances through one selected choice.
 - `go_back_graphic_adventure`: returns to the previous scene.
 
-The Enchanted Forest is open. The House That Whispers uses a shared paid access code. Only its SHA-256 hash is included in the repository; the plaintext code is never stored or returned by the server. An operator may replace the built-in hash with `HOUSE_OF_WHISPERS_ACCESS_CODE_HASH`.
+The Enchanted Forest is open. The House That Whispers uses a shared paid access code, but every Railway deployment and persistent volume are isolated: one buyer unlocking their deployment never unlocks anyone else's. Only the code's SHA-256 hash is included in the repository; the plaintext code is never stored or returned by the server. An operator may replace the built-in hash with `HOUSE_OF_WHISPERS_ACCESS_CODE_HASH`.
 
 Successful activation is stored in the same local state file as adventure rounds. The Railway template's persistent volume keeps it across service restarts and deploys.
 

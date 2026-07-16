@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { existsSync, unlinkSync } from "node:fs";
+import { existsSync, unlinkSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -9,12 +9,21 @@ process.env.COMPANION_GAMES_STATE_FILE = stateFile;
 process.env.HOUSE_OF_WHISPERS_ACCESS_CODE_HASH = createHash("sha256")
   .update("TEST")
   .digest("hex");
+writeFileSync(
+  stateFile,
+  JSON.stringify({
+    licenses: { "house-that-whispers": { activatedAt: "2026-01-01T00:00:00.000Z" } },
+  }),
+);
 
 const game = await import("../src/adventure.js");
 const adventureId = "house-that-whispers";
 
 try {
+  // A legacy global activation must be invalidated by the per-deployment license migration.
+  assert.equal(game.getGraphicAdventureAccessStatus({ adventureId }).accessGranted, false);
   game.activateGraphicAdventure({ adventureId, accessCode: "TEST" });
+  assert.equal(game.getGraphicAdventureAccessStatus({ adventureId }).accessGranted, true);
   let status = game.startGraphicAdventureRound({
     adventureId,
     sceneId: "investigateParlor",
