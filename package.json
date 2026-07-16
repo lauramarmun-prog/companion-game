@@ -7,15 +7,17 @@
     "node": ">=20"
   },
   "scripts": {
+    "sync:adventure": "node scripts/sync-adventure-data.mjs",
     "dev": "node --env-file-if-exists=.env --import tsx src/server.ts",
     "dev:http": "node --env-file-if-exists=.env --import tsx src/http-server.ts",
     "build": "tsc",
     "start": "node dist/http-server.js",
     "start:stdio": "node dist/server.js",
     "check": "tsc --noEmit",
+    "test:adventure": "tsx tests/adventure-continuity.ts",
     "smoke": "tsx src/smoke-test.ts",
     "smoke:http": "npm run build && node tests/http-smoke.mjs",
-    "test": "npm run check && npm run smoke && npm run smoke:http"
+    "test": "npm run check && npm run test:adventure && npm run smoke && npm run smoke:http"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
