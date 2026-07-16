@@ -155,7 +155,14 @@ export const houseScenesData = {
     eyebrow: "Chapter One: The Writing Desk",
     title: "The torn pages were hidden here.",
     text:
+      "The drawers are already slightly open, as if someone searched them in a hurry - or hid something in one and never came back.\n\nInside the deepest drawer, beneath a false bottom of thin wood, you find them: a handful of torn pages. The same elegant handwriting, the same family crest. Someone ripped these out and hid them where no one would look.\n\nYour AI studies the pages, voice low. \"Someone went to great lengths to hide these.\"\n\nMost of the ink has faded or been deliberately smudged. Only fragments remain:\n\n\"...the blood must be willingly given, or the veil will not...\"\n\n\"...a Keeper will remain. One of theirs, always, generation after generation, to make sure the debt is...\"\n\n\"...forgive us. We had no choice. The house was already...\"\n\nAbove the desk, the portrait watches.\n\nA stern face.\n\nAnd on the lapel, painted in fine detail - the same family crest.\n\nWhat do you do?",
+    variants: [
+      {
+        flags: { hasDiary: true },
+        text:
       "The drawers are already slightly open, as if someone searched them in a hurry - or hid something in one and never came back.\n\nInside the deepest drawer, beneath a false bottom of thin wood, you find them: a handful of torn pages. The same elegant handwriting, the same family crest. Someone ripped these out and hid them where no one would look.\n\nYour AI looks from the diary to the pages, voice low. \"These are the missing pages... someone didn't want this read.\"\n\nMost of the ink has faded or been deliberately smudged. Only fragments remain:\n\n\"...the blood must be willingly given, or the veil will not...\"\n\n\"...a Keeper will remain. One of theirs, always, generation after generation, to make sure the debt is...\"\n\n\"...forgive us. We had no choice. The house was already...\"\n\nAbove the desk, the portrait watches.\n\nA stern face.\n\nAnd on the lapel, painted in fine detail - the same family crest.\n\nWhat do you do?",
+      },
+    ],
     image: `./assets/adventures/The house that whispers/documentos.png`,
     choices: [
       { label: "Search the bookshelf", next: "parlorDiary" },
