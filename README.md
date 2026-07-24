@@ -11,6 +11,9 @@ The Railway template configures HTTPS networking, a health check, persistent adv
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `MCP_PATH_SECRET` | Generated automatically | Protects the private ChatGPT MCP URL |
+| `MCP_LEGACY_PUBLIC_ENABLED` | No | Temporarily keeps `/mcp` working while an existing owner reconnects |
+| `WEB_CONNECTION_SECRET` | Recommended | Private connection code between the website and this Railway deployment; not an API key |
+| `WEB_LEGACY_PUBLIC_ENABLED` | No | Temporarily keeps the old website connection working during migration |
 | `COMPANION_GAMES_STATE_FILE` | Preconfigured | Stores graphic-adventure progress on the Railway volume |
 | `FRONTEND_ORIGIN` | No | Optional comma-separated CORS allowlist for a separate web frontend |
 
@@ -21,6 +24,31 @@ https://YOUR-RAILWAY-DOMAIN/YOUR-MCP_PATH_SECRET/mcp
 ```
 
 Keep the full URL private. The template generates the secret automatically, so the person deploying it does not need to invent one.
+
+New deployments should configure both `MCP_PATH_SECRET` and `WEB_CONNECTION_SECRET`, with both legacy switches set to `false`. The two secrets must be different. Companion Games does not require an OpenAI API key.
+
+## Safe migration for existing deployments
+
+This migration does not change `licenseVersion: 2`, remove a House activation, clear a round, or replace `COMPANION_GAMES_STATE_FILE`. Existing paid access and saved adventure progress remain in the deployment's persistent volume.
+
+Do not close the old routes first. Migrate one deployment at a time:
+
+1. Confirm that the Railway volume and `COMPANION_GAMES_STATE_FILE` are still attached.
+2. Add two different random values, each 24-128 URL-safe characters:
+   - `MCP_PATH_SECRET`
+   - `WEB_CONNECTION_SECRET`
+3. Temporarily set:
+   - `MCP_LEGACY_PUBLIC_ENABLED=true`
+   - `WEB_LEGACY_PUBLIC_ENABLED=true`
+4. Redeploy. The old `/mcp` connection and tokenless frontend continue to work during this notice period.
+5. Reconnect ChatGPT with `https://YOUR-DOMAIN/YOUR-MCP_PATH_SECRET/mcp`.
+6. In Companion Games settings, keep the normal Railway domain as the Backend URL and paste `WEB_CONNECTION_SECRET` into the private Railway connection code field.
+7. Test one MCP game and one browser game.
+8. Only after both tests pass, set both legacy switches to `false` and redeploy.
+
+The root status reports booleans under `security` so an owner can confirm whether migration remains pending. It never returns either secret. Legacy requests carry a deprecation warning while the transition switches are enabled.
+
+If the new connection needs troubleshooting, turn the relevant legacy switch back to `true`. This restores the old route without altering licenses or game state.
 
 The first pilot game is Hangman. Word Quest, Quiz, Tic-Tac-Toe, Hidden Fleet, Hidden Fleet Short, and Who is it? are also available. The important rule is that public status does not return private secret words or secret characters while a round is still playing.
 
@@ -103,7 +131,7 @@ For production, rounds where the AI guesses should be created by the private web
 
 Railway should run the HTTP backend:
 
-- API base: `/api`
+- API base: `/api` (private web connection code required when `WEB_CONNECTION_SECRET` is configured and legacy website access is disabled)
 - MCP endpoint: `/:MCP_PATH_SECRET/mcp` on Railway, or `/mcp` locally when no secret is configured
 - Healthcheck: `/health`
 
@@ -176,5 +204,5 @@ npm start
 
 Game rounds live only inside the deployed instance. Most game state is held in process memory and resets when the service restarts; graphic-adventure progress can persist on the attached Railway volume. Public status tools deliberately hide secret words, ship positions, and secret characters while a round is active.
 
-Do not expose the complete private MCP URL. If it leaks, generate a new `MCP_PATH_SECRET` in Railway and reconnect ChatGPT. See [`SECURITY.md`](./SECURITY.md) for reporting security issues.
+Do not expose the complete private MCP URL or `WEB_CONNECTION_SECRET`. If either leaks, generate a replacement in Railway and reconnect the affected client. See [`SECURITY.md`](./SECURITY.md) for reporting security issues.
 

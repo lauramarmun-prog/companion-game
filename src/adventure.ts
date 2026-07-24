@@ -55,6 +55,7 @@ type AdventureRound = {
   adventureId: string;
   currentScene: string;
   history: AdventureHistoryEntry[];
+  visitedScenes: string[];
   playerName: string;
   companionName: string;
   accessGranted: boolean;
@@ -107,6 +108,7 @@ function loadState() {
     round.history = (round.history || []).map((entry) =>
       typeof entry === "string" ? { sceneId: entry, flags: { ...round.flags } } : entry,
     );
+    round.visitedScenes ||= [...new Set(round.history.map((entry) => entry.sceneId))];
     rounds.set(round.id, round);
   }
 
@@ -210,7 +212,11 @@ function requireAdventureAccess(adventureId: string) {
   }
 }
 
-function resolveScene(scene: AdventureScene, flags: Record<string, boolean>) {
+function resolveScene(
+  scene: AdventureScene,
+  flags: Record<string, boolean>,
+  useHubText = false,
+) {
   const variant = scene.variants?.find((candidate) =>
     Object.entries(candidate.flags || {}).every(([key, value]) => flags[key] === value),
   );
@@ -225,7 +231,7 @@ function resolveScene(scene: AdventureScene, flags: Record<string, boolean>) {
     return missingFlagCondition && requiredFlagCondition
       ? currentText.replace(rule.find, rule.replace)
       : currentText;
-  }, resolvedScene.hubText || resolvedScene.text);
+  }, useHubText && resolvedScene.hubText ? resolvedScene.hubText : resolvedScene.text);
 
   return { ...resolvedScene, text };
 }
@@ -242,6 +248,25 @@ function choiceMatchesFlags(choice: AdventureChoice, flags: Record<string, boole
   const hiddenByAnyFlag = (choice.hideWhenAnyFlags || []).some((key) => Boolean(flags[key]));
 
   return hasRequiredFlags && hasAnyRequiredFlag && !hiddenByAllFlags && !hiddenByAnyFlag;
+}
+
+function resolveChoiceForFlags<T extends AdventureChoice>(
+  choice: T,
+  flags: Record<string, boolean>,
+): T {
+  const isLockedFrontDoorChoice =
+    !flags.hasKey &&
+    choice.requiresFlags?.hasKey === true &&
+    (choice.next === "frontDoorFog" || choice.next === "doorAndBlood");
+
+  if (!isLockedFrontDoorChoice) return choice;
+
+  const { hasKey, ...remainingRequirements } = choice.requiresFlags || {};
+  return {
+    ...choice,
+    next: "lockedFrontDoor",
+    requiresFlags: Object.keys(remainingRequirements).length ? remainingRequirements : undefined,
+  } as T;
 }
 
 function getAdventure(adventureId = DEFAULT_ADVENTURE_ID) {
@@ -265,11 +290,13 @@ function formatStatus(round: AdventureRound) {
   requireAdventureAccess(round.adventureId);
   const adventure = getAdventure(round.adventureId);
   const baseScene = adventure.scenes[round.currentScene] || adventure.scenes["start"];
-  const scene = baseScene ? resolveScene(baseScene, round.flags) : undefined;
+  const isRevisit = round.visitedScenes.includes(round.currentScene);
+  const scene = baseScene ? resolveScene(baseScene, round.flags, isRevisit) : undefined;
   if (!scene) throw new Error(`Adventure ${round.adventureId} has no start scene.`);
 
   const choices = scene.choices
     .map((choice, index) => ({ ...choice, index }))
+    .map((choice) => resolveChoiceForFlags(choice, round.flags))
     .filter((choice) => choiceMatchesFlags(choice, round.flags))
     .map((choice) => ({
       index: choice.index,
@@ -294,6 +321,7 @@ function formatStatus(round: AdventureRound) {
     choices,
     canGoBack: round.history.length > 0,
     historyDepth: round.history.length,
+    isRevisit,
     flags: round.flags,
     updatedAt: round.updatedAt,
     companionInstructions: `You are playing this adventure with ${round.playerName}. Talk with them warmly before choosing. Discuss where you both want to go, make the decision feel shared, and never treat the game like a solo automation. When you choose, use one of the available option indexes or labels.`,
@@ -319,6 +347,7 @@ export function startGraphicAdventureRound(input: {
     adventureId,
     currentScene: sceneId,
     history: [],
+    visitedScenes: [],
     playerName: input.playerName || "Player",
     companionName: input.companionName || "AI companion",
     accessGranted: true,
@@ -357,8 +386,12 @@ export function chooseGraphicAdventureOption(input: {
 
   if (choice.next === "start" || choice.next === "awakening") {
     round.history = [];
+    round.visitedScenes = [];
     round.flags = {};
   } else {
+    if (!round.visitedScenes.includes(round.currentScene)) {
+      round.visitedScenes.push(round.currentScene);
+    }
     round.history.push({ sceneId: round.currentScene, flags: { ...round.flags } });
   }
 
@@ -382,6 +415,10 @@ export function goBackGraphicAdventure(input: {
   const round = resolveRound(input.roundId, input.adventureId || DEFAULT_ADVENTURE_ID);
   const previous = round.history.pop();
   if (!previous) throw new Error("There is no previous scene to return to.");
+
+  if (!round.visitedScenes.includes(round.currentScene)) {
+    round.visitedScenes.push(round.currentScene);
+  }
 
   round.currentScene = previous.sceneId;
   round.flags = { ...previous.flags };

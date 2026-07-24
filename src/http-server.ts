@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import cors from "cors";
 import express, { type Request, type Response } from "express";
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
@@ -59,9 +59,39 @@ import { getWordlyStatus, startWordlyRound, submitWordlyGuess, type WordlyTurn }
 const port = Number(process.env.PORT ?? 3000);
 const allowedOrigin = process.env.FRONTEND_ORIGIN ?? "*";
 const mcpPathSecret = process.env.MCP_PATH_SECRET?.trim() || undefined;
+const webConnectionSecret = process.env.WEB_CONNECTION_SECRET?.trim() || undefined;
+
+function readBooleanSetting(name: string, fallback: boolean) {
+  const value = process.env[name]?.trim().toLowerCase();
+  if (!value) return fallback;
+  if (["1", "true", "yes", "on"].includes(value)) return true;
+  if (["0", "false", "no", "off"].includes(value)) return false;
+  throw new Error(`${name} must be true or false.`);
+}
 
 if (mcpPathSecret && !/^[A-Za-z0-9_-]{24,128}$/.test(mcpPathSecret)) {
   throw new Error("MCP_PATH_SECRET must contain 24-128 URL-safe characters (letters, numbers, _ or -).");
+}
+
+if (webConnectionSecret && !/^[A-Za-z0-9_-]{24,128}$/.test(webConnectionSecret)) {
+  throw new Error("WEB_CONNECTION_SECRET must contain 24-128 URL-safe characters (letters, numbers, _ or -).");
+}
+
+const legacyPublicMcpEnabled = readBooleanSetting(
+  "MCP_LEGACY_PUBLIC_ENABLED",
+  !mcpPathSecret,
+);
+const legacyPublicWebEnabled = readBooleanSetting(
+  "WEB_LEGACY_PUBLIC_ENABLED",
+  !webConnectionSecret,
+);
+
+if (!mcpPathSecret && !legacyPublicMcpEnabled) {
+  throw new Error("Set MCP_PATH_SECRET before disabling MCP_LEGACY_PUBLIC_ENABLED.");
+}
+
+if (!webConnectionSecret && !legacyPublicWebEnabled) {
+  throw new Error("Set WEB_CONNECTION_SECRET before disabling WEB_LEGACY_PUBLIC_ENABLED.");
 }
 
 const mcpPath = mcpPathSecret ? `/${mcpPathSecret}/mcp` : "/mcp";
@@ -96,6 +126,52 @@ app.use(
 );
 app.use(express.json({ limit: "64kb" }));
 
+function equalSecrets(submitted: string, expected: string) {
+  const submittedBuffer = Buffer.from(submitted);
+  const expectedBuffer = Buffer.from(expected);
+  return (
+    submittedBuffer.length === expectedBuffer.length &&
+    timingSafeEqual(submittedBuffer, expectedBuffer)
+  );
+}
+
+function getBearerToken(req: Request) {
+  const authorization = req.header("authorization") || "";
+  const match = authorization.match(/^Bearer\s+([A-Za-z0-9_-]+)$/i);
+  return match?.[1] || req.header("x-companion-api-token") || "";
+}
+
+app.use("/api", (req, res, next) => {
+  const submittedToken = getBearerToken(req);
+
+  if (submittedToken) {
+    if (!webConnectionSecret || !equalSecrets(submittedToken, webConnectionSecret)) {
+      res.status(401).json({ ok: false, error: "Invalid Companion Games web connection code." });
+      return;
+    }
+
+    next();
+    return;
+  }
+
+  if (!webConnectionSecret || legacyPublicWebEnabled) {
+    if (webConnectionSecret && legacyPublicWebEnabled) {
+      res.setHeader("Deprecation", "true");
+      res.setHeader(
+        "Warning",
+        '299 - "Legacy unauthenticated API access is enabled temporarily."',
+      );
+    }
+    next();
+    return;
+  }
+
+  res.status(401).json({
+    ok: false,
+    error: "This Companion Games deployment requires its private web connection code.",
+  });
+});
+
 function sendApiError(res: Response, error: unknown) {
   const message = error instanceof Error ? error.message : "Unknown error";
   res.status(400).json({ ok: false, error: message });
@@ -105,7 +181,7 @@ app.get("/", (_req, res) => {
   res.json({
     ok: true,
     name: "mcp-companion-game",
-    version: "0.1.4",
+    version: "0.2.0",
     features: [
       "hangman-status",
       "hangman-letter-guess",
@@ -120,7 +196,22 @@ app.get("/", (_req, res) => {
       "house-that-whispers",
       "empty-status-ok",
     ],
-    mcp: mcpPathSecret ? "Private MCP path configured" : mcpPath,
+    mcp: mcpPathSecret
+      ? legacyPublicMcpEnabled
+        ? "Private MCP path configured; legacy /mcp temporarily enabled"
+        : "Private MCP path configured"
+      : "Legacy public /mcp enabled",
+    security: {
+      mcpPrivatePathConfigured: Boolean(mcpPathSecret),
+      legacyPublicMcpEnabled,
+      webConnectionProtected: Boolean(webConnectionSecret),
+      legacyPublicWebEnabled,
+      migrationRequired:
+        !mcpPathSecret ||
+        legacyPublicMcpEnabled ||
+        !webConnectionSecret ||
+        legacyPublicWebEnabled,
+    },
     api: {
       health: "/health",
       startHangmanRound: "POST /api/hangman/round",
@@ -838,9 +929,27 @@ async function handleMcpGetOrDelete(req: Request, res: Response) {
   await transports[sessionId].handleRequest(req, res);
 }
 
-app.post(mcpPath, handleMcpPost);
-app.get(mcpPath, handleMcpGetOrDelete);
-app.delete(mcpPath, handleMcpGetOrDelete);
+function registerMcpRoute(route: string, legacy = false) {
+  if (legacy) {
+    app.use(route, (_req, res, next) => {
+      res.setHeader("Deprecation", "true");
+      res.setHeader("Warning", '299 - "Legacy public MCP path is enabled temporarily."');
+      next();
+    });
+  }
+
+  app.post(route, handleMcpPost);
+  app.get(route, handleMcpGetOrDelete);
+  app.delete(route, handleMcpGetOrDelete);
+}
+
+if (mcpPathSecret) {
+  registerMcpRoute(mcpPath);
+}
+
+if (legacyPublicMcpEnabled) {
+  registerMcpRoute("/mcp", true);
+}
 
 const httpServer = app.listen(port, "0.0.0.0", () => {
   console.log(`Companion Games backend listening on port ${port}`);
